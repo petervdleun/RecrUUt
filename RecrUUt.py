@@ -204,10 +204,10 @@ selected_id = name_to_id[selected_name]
 # Create the first filtered logs DataFrame with all logs for the selected player
 db_player = db_comp[db_comp['id'] == selected_id]
 
-# Use current_team_color for hr border color
-team_color = db_player['color_code'].iloc[0]
-if team_color == '#000000' or pd.isna(team_color):
-        team_color = '#ffffff'
+# # Use current_team_color for hr border color
+# team_color = db_player['color_code'].iloc[0]
+# if team_color == '#000000' or pd.isna(team_color):
+#         team_color = '#ffffff'
 
 # Function to generate radar chart
 def display_radar_chart(selected_player_data, template_players_data, selected_template, selected_league):
