@@ -33,7 +33,7 @@ comps = pd.read_excel('wysc_comps.xlsx')
 # transfermarkt = pd.read_csv('tm_try.csv')
 
 db = db.merge(logos, left_on='last_club_name', right_on='current_team_name', how='left')
-db = db.merge(colors, left_on='last_club_name', right_on='current_team_name', how='left')
+# db = db.merge(colors, left_on='last_club_name', right_on='current_team_name', how='left')
 db = db.merge(comps, on='competition_id', how='left')
 
 # # Function to match players from Wyscout and TM
