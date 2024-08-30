@@ -115,20 +115,15 @@ db['last_club_name'] = db['last_club_name'].apply(lambda x: ' '.join(x.split()))
 # Filter out GKs (temporary until fix)
 db = db[db['template_1'] != "GK"]
 
-def get_image_as_base64(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
+# Load your image
+image = Image.open("RecrUUT.png")
 
-image_base64 = get_image_as_base64("RecrUUT.png")
+# Create a layout with columns
+col1, col2 = st.columns([1, 3])  # Adjust the ratio [1, 3] to control the layout
 
-st.markdown(
-    f"""
-    <div style="position: fixed; top: 10px; left: 10px;">
-        <img src="data:image/png;base64,{image_base64}" width="400" style="border-radius: 10px;">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Display the image in the first column
+with col1:
+    st.image(image, use_column_width=True)
 
 # Create league dictionary
 comp_dict = db[['competition_id', 'display_name']].drop_duplicates().set_index('competition_id')['display_name'].to_dict()
