@@ -1230,12 +1230,12 @@ with tab1:
     #                         file_name=naming_conv, 
     #                         mime='application/pdf')
         
-    # else:
-    #     # Display an error message if the player has not played enough minutes
-    #     thresh_min = int(selected_player_data['minutes_on_field'].iloc[0])
-    #     st.error(f"{selected_player_data['full_name'].iloc[0]} has not played enough minutes to have a representative data profile according to the selected minute threshold.")
-    #     st.error(f"{selected_player_data['full_name'].iloc[0]} has played {thresh_min} minutes "
-    #                 f"({pctmin:.0f}% of possible minutes). Please change the minute input.")
+    else:
+        # Display an error message if the player has not played enough minutes
+        thresh_min = int(selected_player_data['minutes_on_field'].iloc[0])
+        st.error(f"{selected_player_data['full_name'].iloc[0]} has not played enough minutes to have a representative data profile according to the selected minute threshold.")
+        st.error(f"{selected_player_data['full_name'].iloc[0]} has played {thresh_min} minutes "
+                    f"({pctmin:.0f}% of possible minutes). Please change the minute input.")
         
 with tab2:
     # Display a warning or introductory note (optional)
