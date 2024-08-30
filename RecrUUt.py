@@ -27,11 +27,12 @@ from reportlab.lib.utils import ImageReader
 st.set_page_config(layout='wide')
 
 # Data import
-data_path = os.path.join('data', 'wysc_test.csv')
-db = pd.read_csv(data_path)
+data_wysc = os.path.join('data', 'wysc_test.csv')
+db = pd.read_csv(data_wysc)
+data_logos = os.path.join('data', 'logo_info.csv')
 # db = pd.read_csv('data\wysc_test.csv')
-logos = pd.read_csv('data\logo_info.csv')
-comps = pd.read_excel('data\wysc_comps.xlsx')
+logos = pd.read_csv(data_logos)
+comps = pd.read_excel('data/wysc_comps.xlsx')
 # colors = pd.read_excel('logo_colors.xlsx')
 # transfermarkt = pd.read_csv('tm_try.csv')
 
