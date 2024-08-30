@@ -28,7 +28,7 @@ st.set_page_config(layout='wide')
 # Data import
 db = pd.read_csv('wysc_test.csv')
 logos = pd.read_csv('logo_info.csv')
-colors = pd.read_excel('logo_colors.xlsx')
+# colors = pd.read_excel('logo_colors.xlsx')
 comps = pd.read_excel('wysc_comps.xlsx')
 # transfermarkt = pd.read_csv('tm_try.csv')
 
