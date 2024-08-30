@@ -123,7 +123,7 @@ image_base64 = get_image_as_base64("RecrUUT.png")
 
 st.markdown(
     f"""
-    <div style="position: fixed; top: 20px; left: 1400px;">
+    <div style="position: fixed; top: 0px; left: 1300px;">
         <img src="data:image/png;base64,{image_base64}" width="150" style="border-radius: 10px;">
     </div>
     """,
