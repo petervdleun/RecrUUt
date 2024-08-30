@@ -1154,44 +1154,44 @@ with tab1:
             # Set text color to white
             pdf.setFillColorRGB(1, 1, 1)  # RGB values are from 0 to 1
 
-            # Decode the base64 encoded image
-            radar_chart_data = base64.b64decode(encoded_img)
-            radar_chart_io = BytesIO(radar_chart_data)
-            radar_chart_image = ImageReader(radar_chart_io)
+            # # Decode the base64 encoded image
+            # radar_chart_data = base64.b64decode(encoded_img)
+            # radar_chart_io = BytesIO(radar_chart_data)
+            # radar_chart_image = ImageReader(radar_chart_io)
 
-            # Draw the radar chart image on the PDF
-            pdf.drawImage(radar_chart_image, -180, 70, width=800, height=400, preserveAspectRatio=True)
+            # # Draw the radar chart image on the PDF
+            # pdf.drawImage(radar_chart_image, -180, 70, width=800, height=400, preserveAspectRatio=True)
 
-            passing_chart_data = base64.b64decode(encoded_img3)
-            passing_chart_io = BytesIO(passing_chart_data)
-            passing_chart_image = ImageReader(passing_chart_io)
+            # passing_chart_data = base64.b64decode(encoded_img3)
+            # passing_chart_io = BytesIO(passing_chart_data)
+            # passing_chart_image = ImageReader(passing_chart_io)
 
-            # Add title to the PDF
-            passing_title = "Passing Style"
-            pdf.setFillColorRGB(255, 255, 255)
-            pdf.setFont("Helvetica-Bold", 14)
-            pdf.drawString(600, 270, passing_title)
+            # # Add title to the PDF
+            # passing_title = "Passing Style"
+            # pdf.setFillColorRGB(255, 255, 255)
+            # pdf.setFont("Helvetica-Bold", 14)
+            # pdf.drawString(600, 270, passing_title)
 
-            pdf.drawImage(passing_chart_image, 450, 70, width=350, height=200, preserveAspectRatio=True)
+            # pdf.drawImage(passing_chart_image, 450, 70, width=350, height=200, preserveAspectRatio=True)
 
-            # Add title to the PDF
-            passing_title = "Role Profle"
-            pdf.setFillColorRGB(255, 255, 255)
-            pdf.setFont("Helvetica-Bold", 14)
-            pdf.drawString(608, 493, passing_title)
+            # # Add title to the PDF
+            # passing_title = "Role Profle"
+            # pdf.setFillColorRGB(255, 255, 255)
+            # pdf.setFont("Helvetica-Bold", 14)
+            # pdf.drawString(608, 493, passing_title)
 
-            # Create a BytesIO buffer to save the image
-            img_buffer = BytesIO()
-            # Export the figure as a PNG image to the buffer
-            fig2.write_image(img_buffer, format="png", engine="kaleido", width=500, height=300)
-            # Ensure the buffer's position is at the beginning
-            img_buffer.seek(0)
+            # # Create a BytesIO buffer to save the image
+            # img_buffer = BytesIO()
+            # # Export the figure as a PNG image to the buffer
+            # fig2.write_image(img_buffer, format="png", engine="kaleido", width=500, height=300)
+            # # Ensure the buffer's position is at the beginning
+            # img_buffer.seek(0)
 
-            # Convert the BytesIO buffer to an ImageReader object
-            plotly_image = ImageReader(img_buffer)
+            # # Convert the BytesIO buffer to an ImageReader object
+            # plotly_image = ImageReader(img_buffer)
 
-            # Draw the Plotly figure image on the PDF
-            pdf.drawImage(plotly_image, 450, 290, width=350, height=200, preserveAspectRatio=False)
+            # # Draw the Plotly figure image on the PDF
+            # pdf.drawImage(plotly_image, 450, 290, width=350, height=200, preserveAspectRatio=False)
 
             # Set the stroke color for the line (e.g., white)
             pdf.setStrokeColorRGB(0.5, 0.5, 0.5) 
