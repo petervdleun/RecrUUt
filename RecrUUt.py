@@ -124,7 +124,7 @@ image_base64 = get_image_as_base64("RecrUUT.png")
 st.markdown(
     f"""
     <div style="position: fixed; top: 10px; left: 10px;">
-        <img src="data:image/png;base64,{image_base64}" width="150" style="border-radius: 10px;">
+        <img src="data:image/png;base64,{image_base64}" width="400" style="border-radius: 10px;">
     </div>
     """,
     unsafe_allow_html=True
