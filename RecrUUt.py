@@ -1059,7 +1059,7 @@ with tab1:
             pdf.line(0, 514, 100, 595)
 
             # Add FC Utrecht logo to the top-left corner
-            fc_utrecht_logo_path = "images\fc-utrecht-2021-rgb.png"
+            fc_utrecht_logo_path = "images\logo-fcu.png"
             pdf.drawImage(fc_utrecht_logo_path, 30, 530, width=40, height=40, preserveAspectRatio=True)
 
             # Add title to the PDF
