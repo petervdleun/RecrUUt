@@ -1047,173 +1047,173 @@ with tab1:
         
         display_name = db_player['name'].iloc[0]
 
-        # def generate_pdf(encoded_img, encoded_img3, fig2):
-        #     # Create a BytesIO buffer to hold the PDF data
-        #     buffer = BytesIO()
+        def generate_pdf(encoded_img, encoded_img3, fig2):
+            # Create a BytesIO buffer to hold the PDF data
+            buffer = BytesIO()
 
-        #     # Create a PDF document with landscape orientation (A4 size)
-        #     pdf = canvas.Canvas(buffer, pagesize=landscape(A4))
+            # Create a PDF document with landscape orientation (A4 size)
+            pdf = canvas.Canvas(buffer, pagesize=landscape(A4))
 
-        #     # Set background color to dark
-        #     pdf.setFillColorRGB(14 / 255, 17 / 255, 23 / 255)
-        #     pdf.rect(0, 0, 842, 595, fill=True)
+            # Set background color to dark
+            pdf.setFillColorRGB(14 / 255, 17 / 255, 23 / 255)
+            pdf.rect(0, 0, 842, 595, fill=True)
             
-        #     # Draw a line
-        #     pdf.setStrokeColorRGB(0.639, 0.094, 0.094)  # Set line color to white
-        #     pdf.line(0, 514, 100, 595)
+            # Draw a line
+            pdf.setStrokeColorRGB(0.639, 0.094, 0.094)  # Set line color to white
+            pdf.line(0, 514, 100, 595)
 
-        #     # Add FC Utrecht logo to the top-left corner
-        #     pdf.drawImage('logo-fcu.png', 30, 530, width=40, height=40, preserveAspectRatio=True)
+            # Add FC Utrecht logo to the top-left corner
+            pdf.drawImage('logo-fcu.png', 30, 530, width=40, height=40, preserveAspectRatio=True)
 
-        #     # Add title to the PDF
-        #     title = f"{display_name}"
-        #     pdf.setFillColorRGB(255, 255, 255)
-        #     pdf.setFont("Helvetica-Bold", 16)
+            # Add title to the PDF
+            title = f"{display_name}"
+            pdf.setFillColorRGB(255, 255, 255)
+            pdf.setFont("Helvetica-Bold", 16)
 
-        #     # Calculate the width of the title text
-        #     title_width = pdf.stringWidth(title, "Helvetica-Bold", 16)
+            # Calculate the width of the title text
+            title_width = pdf.stringWidth(title, "Helvetica-Bold", 16)
 
-        #     # Set the X position to center the title
-        #     title_x_position = 120  # Adjust as needed for overall page layout
-        #     pdf.drawString(title_x_position, 560, title)
+            # Set the X position to center the title
+            title_x_position = 120  # Adjust as needed for overall page layout
+            pdf.drawString(title_x_position, 560, title)
 
-        #     # Add the subtitle centered under the title
-        #     subtitle = season
-        #     pdf.setFillColorRGB(0.6, 0.6, 0.6)
-        #     pdf.setFont("Helvetica-Bold", 12)
+            # Add the subtitle centered under the title
+            subtitle = season
+            pdf.setFillColorRGB(0.6, 0.6, 0.6)
+            pdf.setFont("Helvetica-Bold", 12)
 
-        #     # Calculate the width of the subtitle text
-        #     subtitle_width = pdf.stringWidth(subtitle, "Helvetica-Bold", 12)
-        #     # Calculate the X position to center the subtitle under the title
-        #     subtitle_x_position = title_x_position + (title_width - subtitle_width) / 2
+            # Calculate the width of the subtitle text
+            subtitle_width = pdf.stringWidth(subtitle, "Helvetica-Bold", 12)
+            # Calculate the X position to center the subtitle under the title
+            subtitle_x_position = title_x_position + (title_width - subtitle_width) / 2
 
-        #     # Draw the subtitle
-        #     pdf.drawString(subtitle_x_position, 544, subtitle)
+            # Draw the subtitle
+            pdf.drawString(subtitle_x_position, 544, subtitle)
 
-        #     # Set font and color for the labels (e.g., "NATIONALITY", "DATE OF BIRTH")
-        #     label_font = "Helvetica-Bold"
-        #     label_font_size = 10
-        #     label_color = (0.6, 0.6, 0.6)  # Gray color
+            # Set font and color for the labels (e.g., "NATIONALITY", "DATE OF BIRTH")
+            label_font = "Helvetica-Bold"
+            label_font_size = 10
+            label_color = (0.6, 0.6, 0.6)  # Gray color
 
-        #     # Set font and color for the values (e.g., the actual nationality, date of birth)
-        #     value_font = "Helvetica-Bold"
-        #     value_font_size = 10
-        #     value_color = (1, 1, 1)  # White color
+            # Set font and color for the values (e.g., the actual nationality, date of birth)
+            value_font = "Helvetica-Bold"
+            value_font_size = 10
+            value_color = (1, 1, 1)  # White color
 
-        #     # Set initial position for the first row of text
-        #     x_position = 350
-        #     y_position = 570
+            # Set initial position for the first row of text
+            x_position = 350
+            y_position = 570
 
-        #     # NATIONALITY row
-        #     pdf.setFont(label_font, label_font_size)
-        #     pdf.setFillColorRGB(*label_color)
-        #     pdf.drawString(x_position, y_position, "NATIONALITY")
+            # NATIONALITY row
+            pdf.setFont(label_font, label_font_size)
+            pdf.setFillColorRGB(*label_color)
+            pdf.drawString(x_position, y_position, "NATIONALITY")
 
-        #     pdf.setFont(value_font, value_font_size)
-        #     pdf.setFillColorRGB(*value_color)
-        #     pdf.drawString(x_position + 110, y_position, passport)
+            pdf.setFont(value_font, value_font_size)
+            pdf.setFillColorRGB(*value_color)
+            pdf.drawString(x_position + 110, y_position, passport)
 
-        #     # Move to the next row
-        #     y_position -= 15
+            # Move to the next row
+            y_position -= 15
 
-        #     # DATE OF BIRTH row
-        #     pdf.setFont(label_font, label_font_size)
-        #     pdf.setFillColorRGB(*label_color)
-        #     pdf.drawString(x_position, y_position, "DATE OF BIRTH")
+            # DATE OF BIRTH row
+            pdf.setFont(label_font, label_font_size)
+            pdf.setFillColorRGB(*label_color)
+            pdf.drawString(x_position, y_position, "DATE OF BIRTH")
 
-        #     pdf.setFont(value_font, value_font_size)
-        #     pdf.setFillColorRGB(*value_color)
-        #     pdf.drawString(x_position + 110, y_position, birth_date)
+            pdf.setFont(value_font, value_font_size)
+            pdf.setFillColorRGB(*value_color)
+            pdf.drawString(x_position + 110, y_position, birth_date)
 
-        #     # Move to the next row
-        #     y_position -= 15
+            # Move to the next row
+            y_position -= 15
 
-        #     # POSITION row
-        #     pdf.setFont(label_font, label_font_size)
-        #     pdf.setFillColorRGB(*label_color)
-        #     pdf.drawString(x_position, y_position, "TEMPLATE")
+            # POSITION row
+            pdf.setFont(label_font, label_font_size)
+            pdf.setFillColorRGB(*label_color)
+            pdf.drawString(x_position, y_position, "TEMPLATE")
 
-        #     pdf.setFont(value_font, value_font_size)
-        #     pdf.setFillColorRGB(*value_color)
-        #     pdf.drawString(x_position + 110, y_position, pos_disp.get(selected_template))
+            pdf.setFont(value_font, value_font_size)
+            pdf.setFillColorRGB(*value_color)
+            pdf.drawString(x_position + 110, y_position, pos_disp.get(selected_template))
 
-        #     # Draw a line underneath the title
-        #     pdf.setStrokeColorRGB(0.639, 0.094, 0.094)
-        #     pdf.line(90, 520, 800, 520)
+            # Draw a line underneath the title
+            pdf.setStrokeColorRGB(0.639, 0.094, 0.094)
+            pdf.line(90, 520, 800, 520)
 
-        #     # Set text color to white
-        #     pdf.setFillColorRGB(1, 1, 1)  # RGB values are from 0 to 1
+            # Set text color to white
+            pdf.setFillColorRGB(1, 1, 1)  # RGB values are from 0 to 1
 
-        #     # Decode the base64 encoded image
-        #     radar_chart_data = base64.b64decode(encoded_img)
-        #     radar_chart_io = BytesIO(radar_chart_data)
-        #     radar_chart_image = ImageReader(radar_chart_io)
+            # Decode the base64 encoded image
+            radar_chart_data = base64.b64decode(encoded_img)
+            radar_chart_io = BytesIO(radar_chart_data)
+            radar_chart_image = ImageReader(radar_chart_io)
 
-        #     # Draw the radar chart image on the PDF
-        #     pdf.drawImage(radar_chart_image, -180, 70, width=800, height=400, preserveAspectRatio=True)
+            # Draw the radar chart image on the PDF
+            pdf.drawImage(radar_chart_image, -180, 70, width=800, height=400, preserveAspectRatio=True)
 
-        #     passing_chart_data = base64.b64decode(encoded_img3)
-        #     passing_chart_io = BytesIO(passing_chart_data)
-        #     passing_chart_image = ImageReader(passing_chart_io)
+            passing_chart_data = base64.b64decode(encoded_img3)
+            passing_chart_io = BytesIO(passing_chart_data)
+            passing_chart_image = ImageReader(passing_chart_io)
 
-        #     # Add title to the PDF
-        #     passing_title = "Passing Style"
-        #     pdf.setFillColorRGB(255, 255, 255)
-        #     pdf.setFont("Helvetica-Bold", 14)
-        #     pdf.drawString(600, 270, passing_title)
+            # Add title to the PDF
+            passing_title = "Passing Style"
+            pdf.setFillColorRGB(255, 255, 255)
+            pdf.setFont("Helvetica-Bold", 14)
+            pdf.drawString(600, 270, passing_title)
 
-        #     pdf.drawImage(passing_chart_image, 450, 70, width=350, height=200, preserveAspectRatio=True)
+            pdf.drawImage(passing_chart_image, 450, 70, width=350, height=200, preserveAspectRatio=True)
 
-        #     # Add title to the PDF
-        #     passing_title = "Role Profle"
-        #     pdf.setFillColorRGB(255, 255, 255)
-        #     pdf.setFont("Helvetica-Bold", 14)
-        #     pdf.drawString(608, 493, passing_title)
+            # Add title to the PDF
+            passing_title = "Role Profle"
+            pdf.setFillColorRGB(255, 255, 255)
+            pdf.setFont("Helvetica-Bold", 14)
+            pdf.drawString(608, 493, passing_title)
 
-        #     # Create a BytesIO buffer to save the image
-        #     img_buffer = BytesIO()
-        #     # Export the figure as a PNG image to the buffer
-        #     fig2.write_image(img_buffer, format="png", engine="kaleido", width=500, height=300)
-        #     # Ensure the buffer's position is at the beginning
-        #     img_buffer.seek(0)
+            # Create a BytesIO buffer to save the image
+            img_buffer = BytesIO()
+            # Export the figure as a PNG image to the buffer
+            fig2.write_image(img_buffer, format="png", engine="kaleido", width=500, height=300)
+            # Ensure the buffer's position is at the beginning
+            img_buffer.seek(0)
 
-        #     # Convert the BytesIO buffer to an ImageReader object
-        #     plotly_image = ImageReader(img_buffer)
+            # Convert the BytesIO buffer to an ImageReader object
+            plotly_image = ImageReader(img_buffer)
 
-        #     # Draw the Plotly figure image on the PDF
-        #     pdf.drawImage(plotly_image, 450, 290, width=350, height=200, preserveAspectRatio=False)
+            # Draw the Plotly figure image on the PDF
+            pdf.drawImage(plotly_image, 450, 290, width=350, height=200, preserveAspectRatio=False)
 
-        #     # Set the stroke color for the line (e.g., white)
-        #     pdf.setStrokeColorRGB(0.5, 0.5, 0.5) 
-        #     pdf.setLineWidth(1)
-        #     pdf.setDash(3, 2)  # 3 units on, 2 units off
-        #     pdf.line(430, 20, 430, 510)
-        #     pdf.setDash(1, 0)
+            # Set the stroke color for the line (e.g., white)
+            pdf.setStrokeColorRGB(0.5, 0.5, 0.5) 
+            pdf.setLineWidth(1)
+            pdf.setDash(3, 2)  # 3 units on, 2 units off
+            pdf.line(430, 20, 430, 510)
+            pdf.setDash(1, 0)
 
-        #     # Finalize the PDF
-        #     pdf.showPage()
-        #     pdf.save()
+            # Finalize the PDF
+            pdf.showPage()
+            pdf.save()
 
-        #     # Get the PDF data from the buffer
-        #     buffer.seek(0)
-        #     return buffer.getvalue()
+            # Get the PDF data from the buffer
+            buffer.seek(0)
+            return buffer.getvalue()
 
-        # # Placeholder for the base64 encoded radar chart image
-        # encoded_img = encoded_img
-        # encoded_img3 = encoded_img3
-        # fig2 = fig2
+        # Placeholder for the base64 encoded radar chart image
+        encoded_img = encoded_img
+        encoded_img3 = encoded_img3
+        fig2 = fig2
 
-        # selected_player_team = selected_player_data['last_club_name'].iloc[0]
-        # selected_player_team = ' '.join(selected_player_team.split())
-        # today = datetime.today()
-        # today_fm = today.strftime("%d-%m-%Y")
-        # naming_conv = f"{selected_player_name}_{selected_player_team}_{season}_{today_fm}.pdf"
+        selected_player_team = selected_player_data['last_club_name'].iloc[0]
+        selected_player_team = ' '.join(selected_player_team.split())
+        today = datetime.today()
+        today_fm = today.strftime("%d-%m-%Y")
+        naming_conv = f"{selected_player_name}_{selected_player_team}_{season}_{today_fm}.pdf"
 
-        # # Button to generate and download the PDF in one step
-        # st.download_button(label="Download PDF Report", 
-        #                     data=generate_pdf(encoded_img, encoded_img3, fig2), 
-        #                     file_name=naming_conv, 
-        #                     mime='application/pdf')
+        # Button to generate and download the PDF in one step
+        st.download_button(label="Download PDF Report", 
+                            data=generate_pdf(encoded_img, encoded_img3, fig2), 
+                            file_name=naming_conv, 
+                            mime='application/pdf')
         
     else:
         # Display an error message if the player has not played enough minutes
