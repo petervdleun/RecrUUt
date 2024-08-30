@@ -1061,20 +1061,7 @@ with tab1:
 
             # Add FC Utrecht logo to the top-left corner
             # fc_utrecht_logo_path = 'logo-fcu.png'
-            # Test if the logo exists
-            logo_path = 'logo-fcu.png'
-            
-            if os.path.exists(logo_path):
-                st.write(f"File found: {logo_path}")
-
-                try:
-                    # Draw the image in the PDF
-                    pdf.drawImage(logo_path, 30, 530, width=40, height=40, preserveAspectRatio=True)
-                except Exception as e:
-                    st.error(f"Error drawing image: {e}")
-            else:
-                st.error(f"File not found: {logo_path}")
-                st.write("Current directory contents:", os.listdir('.'))
+            # pdf.drawImage('logo-fcu.png', 30, 530, width=40, height=40, preserveAspectRatio=True)
 
             # Add title to the PDF
             title = f"{display_name}"
