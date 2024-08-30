@@ -8,6 +8,7 @@ import urllib3
 import base64
 import numpy as np
 import requests
+import os
 from bs4 import BeautifulSoup
 from dateutil import parser
 from matplotlib.patches import Patch
@@ -1059,7 +1060,7 @@ with tab1:
             pdf.line(0, 514, 100, 595)
 
             # Add FC Utrecht logo to the top-left corner
-            fc_utrecht_logo_path = "images/logo-fcu.png"
+            fc_utrecht_logo_path = os.path.join('images', 'logo-fcu.png')
             pdf.drawImage(fc_utrecht_logo_path, 30, 530, width=40, height=40, preserveAspectRatio=True)
 
             # Add title to the PDF
