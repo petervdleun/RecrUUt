@@ -26,7 +26,7 @@ from reportlab.lib.utils import ImageReader
 st.set_page_config(layout='wide')
 
 # Data import
-db = pd.read_csv('data/wysc_test.csv')
+db = pd.read_csv('data/wysc_test.csv', encoding='utf-8-sig')
 logos = pd.read_csv('data/logo_info.csv')
 comps = pd.read_excel('data/wysc_comps.xlsx')
 # colors = pd.read_excel('logo_colors.xlsx')
