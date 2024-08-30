@@ -14,3 +14,4 @@ mplsoccer
 streamlit-elements
 reportlab
 setuptools
+openpyxl
