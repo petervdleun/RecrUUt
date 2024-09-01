@@ -1442,10 +1442,6 @@ with tab3:
         # Replace multiple values using the dictionary
         match_data['League'] = match_data['League'].replace(league_names)
 
-        # Filter to include only games from today and beyond
-        today = datetime.today().date()
-        match_data = match_data[match_data['Date'] >= today].reset_index(drop=True)
-
         return match_data
     
     # Streamlit UI
@@ -1461,6 +1457,9 @@ with tab3:
 
     if st.session_state['match_data'] is not None:
         match_data = st.session_state['match_data']
+        # Filter to include only games from today and beyond
+        today = datetime.today().date()
+        match_data = match_data[match_data['Date'] >= today].reset_index(drop=True)
 
         # Get unique leagues for the multiselect
         unique_leagues = match_data['League'].unique()
