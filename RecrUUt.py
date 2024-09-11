@@ -940,126 +940,133 @@ with tab1:
         npg = int(db_player['non_penalty_goal'].iloc[0])
         ast = int(db_player['assists'].iloc[0])
 
-        # Initialize the dashboard layout
-        layout = [
-            dashboard.Item("profile_card", x=0, y=0, w=10, h=1.5),
-            dashboard.Item("radar_chart", x=0, y=1.5, w=5.25, h=3.8),
-            dashboard.Item("swarm_plot", x=6, y=1.5, w=4.75, h=1.85),
-            dashboard.Item("passing_profile", x=6, y=3.5, w=4.75, h=1.95)
-        ]
+        # Save the figure as an HTML string
+        html_str = fig2.to_html(include_plotlyjs='cdn')  # Generating HTML for the Plotly chart
+        html_data_url = f"data:text/html;base64,{base64.b64encode(html_str.encode()).decode()}"  # Encode the HTML as a base64 URL
 
-        # Render the elements within the dashboard
-        with elements("dashboard"):
-            with dashboard.Grid(layout, draggableHandle=".draggable", resizable=True):
-                
-                # Profile Card
-                with mui.Paper(key="profile_card", style={
-                    "padding": "7px", 
-                    "textAlign": "center", 
-                    "border": "2px solid white",  
-                    "borderRadius": "4px", 
-                    "backgroundColor": "black"  
-                }):
-                    
-                    # Header with Team Name and Logo
-                    mui.Typography(variant="h5", style={"color": "white", "fontFamily": "Bahnschrift"})(
-                        f"{player_name} ",
-                        mui.IconButton(
-                            html.img(
-                                src=image_url,
-                                style={
-                                    "verticalAlign": "middle",
-                                    "width": "45px",
-                                    "filter": brightness_filter
-                                }
+        # Profile Card spans both columns, outside of the column block
+        with st.container():
+            layout_profile_card = [
+                dashboard.Item("profile_card", x=0, y=0, w=15, h=1.5),
+            ]
+            
+            with elements("dashboard_profile"):
+                with dashboard.Grid(layout_profile_card, draggableHandle=".draggable", resizable=True):
+                    # Profile Card
+                    with mui.Paper(key="profile_card", style={
+                        "padding": "7px", 
+                        "margin": "25px 0px 0px 0px",    # Ensure no extra margin
+                        "textAlign": "center", 
+                        "border": "2px solid #ffffff",  
+                        "borderRadius": "4px", 
+                        "backgroundColor": "#000000",
+                    }):
+                        # Header with Team Name and Logo
+                        mui.Typography(variant="h5", style={"color": "#ffffff", "fontFamily": "Bahnschrift"})(
+                            f"{player_name} ",
+                            mui.IconButton(
+                                html.img(
+                                    src=image_url,
+                                    style={
+                                        "verticalAlign": "middle",
+                                        "width": "45px",
+                                        "filter": brightness_filter
+                                    }
+                                )
                             )
                         )
-                    )
-                    
-                    # Create a grid container for the profile image and details
-                    with mui.Grid(container=True, spacing=-1.2, alignItems="center"):
-                        
-                        # Grid item for the profile image (left side)
-                        with mui.Grid(item=True, xs=3):  # Adjust xs to control width
-                            mui.Avatar(
-                                src=image_info,
-                                style={"width": "100px", "height": "100px", "margin": "5px auto", "marginBottom": "10px",
-                                            "border": "3px solid #4f4f4f",  "borderRadius": "50%"}
-                            )
 
-                            # Define emojis
-                            football_emoji = "᳂" 
-                            boot_emoji = "➾" 
+                        # Create a grid container for the profile image and details
+                        with mui.Grid(container=True, spacing=-1.2, alignItems="center"):
                             
-                            # Use mui.Box to align the emojis and values
-                            with mui.Box(style={"textAlign": "center", "color": "white", "marginTop": "10px"}):
-                                # Display football emoji with the number of goals
-                                with mui.Box(style={"display": "inline-flex", "alignItems": "center", "marginRight": "15px"}):
-                                    mui.Typography(variant="body1", style={"fontFamily": "Bahnschrift", "fontSize": "20px", "marginRight": "8px"})(football_emoji)
-                                    mui.Typography(variant="body1", style={"fontFamily": "Bahnschrift", "fontSize": "15px"})(npg)
+                            # Grid item for the profile image (left side)
+                            with mui.Grid(item=True, xs=3):  # Adjust xs to control width
+                                mui.Avatar(
+                                    src=image_info,
+                                    style={"width": "100px", "height": "100px", "margin": "5px auto", "marginBottom": "10px",
+                                        "border": "3px solid #4f4f4f",  "borderRadius": "50%"}
+                                )
+
+                                # Define emojis
+                                football_emoji = "᳂" 
+                                boot_emoji = "➾" 
                                 
-                                # Display boot emoji with the number of assists
-                                with mui.Box(style={"display": "inline-flex", "alignItems": "center"}):
-                                    mui.Typography(variant="body1", style={"fontFamily": "Bahnschrift", "fontSize": "20px", "marginRight": "8px"})(boot_emoji)
-                                    mui.Typography(variant="body1", style={"fontFamily": "Bahnschrift", "fontSize": "15px"})(ast)
-
-                        # Grid item for the profile text (right side)
-                        with mui.Grid(item=True, xs=4.3):  # Adjust xs to control width
-                            
-                            # NATIONALITY row
-                            with mui.Box(style={"display": "flex", "alignItems": "center"}):
-                                mui.Typography(variant="h6", style={"color": "gray", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("NATIONALITY")
-                                mui.Typography(variant="h5", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + passport)
-                            
-                            # DATE OF BIRTH row
-                            with mui.Box(style={"display": "flex", "alignItems": "center"}):
-                                mui.Typography(variant="h6", style={"color": "gray", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("DATE OF BIRTH")
-                                mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px","fontFamily": "Bahnschrift"})(f"{birth_date} ({player_age})")
-                            
-                            # POSITION row
-                            with mui.Box(style={"display": "flex", "alignItems": "center"}):
-                                mui.Typography(variant="h6", style={"color": "gray", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("POSITION")
-                                mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + template_disp)
-
-                        # New Grid item for additional information (right side)
-                        with mui.Grid(item=True, xs=4.4):
-                            with mui.Box(style={"display": "flex", "alignItems": "center"}):
-                                mui.Typography(variant="h6", style={"color": "gray", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("SEASON")
-                                mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + str(season))
-
-                            with mui.Box(style={"display": "flex", "alignItems": "center"}):
-                                mui.Typography(variant="h6", style={"color": "gray", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("MINUTES PLAYED")
-                                mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + str(min_played))
-
-                            with mui.Box(style={"display": "flex", "alignItems": "center"}):
-                                mui.Typography(variant="h6", style={"color": "gray", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("MAIN ROLE")
-                                mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + str(main_role))
-
-                # Radar Chart (Display the saved image)
-                with mui.Paper(key="radar_chart", elevation=3, style={"padding": "2px", "backgroundColor": "#ffffff"}):
-                    html.img(src=f"data:image/png;base64,{encoded_img}", style={"width": "100%", "height": "100%"})
-
-                # Save the figure as an HTML string
-                html_str = fig2.to_html(include_plotlyjs='cdn')
-                # Create a base64-encoded data URL for the iframe
-                html_data_url = f"data:text/html;base64,{base64.b64encode(html_str.encode()).decode()}"
-
-                # Swarm Plot (Display the Plotly chart as an iframe)
-                with mui.Paper(key="swarm_plot", elevation=3, style={"padding": "0px", "backgroundColor": "#ffffff"}):
-                                html.h4("Role Profile Style", style={"textAlign": "center", "margin": "0px", "color": "#000000", "lineHeight": "18px",
-                                                                    "padding": "5px 0px 0px 0px", "fontFamily": "Bahnschrift", "fontSize": "14px",
-                                                                    "backgroundColor": "#e6e6e6"})
-                                html.iframe(src=html_data_url, style={"width": "100%", "height": "100%", "border": "none",
-                                                                    "transform": "scale(1.025)"}
-                    )
+                                # Use mui.Box to align the emojis and values
+                                with mui.Box(style={"textAlign": "center", "color": "#ffffff", "marginTop": "10px"}):
+                                    # Display football emoji with the number of goals
+                                    with mui.Box(style={"display": "inline-flex", "alignItems": "center", "marginRight": "15px"}):
+                                        mui.Typography(variant="body1", style={"fontFamily": "Bahnschrift", "fontSize": "20px", "marginRight": "8px"})(football_emoji)
+                                        mui.Typography(variant="body1", style={"fontFamily": "Bahnschrift", "fontSize": "15px"})(npg)
+                                    
+                                    # Display boot emoji with the number of assists
+                                    with mui.Box(style={"display": "inline-flex", "alignItems": "center"}):
+                                        mui.Typography(variant="body1", style={"fontFamily": "Bahnschrift", "fontSize": "20px", "marginRight": "8px"})(boot_emoji)
+                                        mui.Typography(variant="body1", style={"fontFamily": "Bahnschrift", "fontSize": "15px"})(ast)
+                                        
+                            # Grid item for the profile text (right side)
+                            with mui.Grid(item=True, xs=4.4):
+                                with mui.Box(style={"display": "flex", "alignItems": "center"}):
+                                    mui.Typography(variant="h6", style={"color": "#808080", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("NATIONALITY")
+                                    mui.Typography(variant="h5", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + passport)
                                 
-                # Radar Chart (Display the saved image)
-                with mui.Paper(key="passing_profile", elevation=3, style={"padding": "2px", "backgroundColor": "#ffffff"}):
-                    html.h4("Passing Style", style={"textAlign": "center", "margin": "0px", "color": "#000000", "lineHeight": "18px",
-                                            "padding": "4px 0px 4px 0px", "fontFamily": "Bahnschrift", "fontSize": "14px",
-                                            "backgroundColor": "#e6e6e6"})
-                    html.img(src=f"data:image/png;base64,{encoded_img3}", style={"width": "99.5%", "height": "91%"})
-        
+                                with mui.Box(style={"display": "flex", "alignItems": "center"}):
+                                    mui.Typography(variant="h6", style={"color": "#808080", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("DATE OF BIRTH")
+                                    mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px","fontFamily": "Bahnschrift"})(f"{birth_date} ({player_age})")
+                                
+                                with mui.Box(style={"display": "flex", "alignItems": "center"}):
+                                    mui.Typography(variant="h6", style={"color": "#808080", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("POSITION")
+                                    mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + template_disp)
+
+                            # New Grid item for additional information (right side)
+                            with mui.Grid(item=True, xs=4.4):
+                                with mui.Box(style={"display": "flex", "alignItems": "center"}):
+                                    mui.Typography(variant="h6", style={"color": "#808080", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("SEASON")
+                                    mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + str(season))
+
+                                with mui.Box(style={"display": "flex", "alignItems": "center"}):
+                                    mui.Typography(variant="h6", style={"color": "#808080", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("MINUTES PLAYED")
+                                    mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + str(min_played))
+
+                                with mui.Box(style={"display": "flex", "alignItems": "center"}):
+                                    mui.Typography(variant="h6", style={"color": "#808080", "minWidth": "200px", "fontSize": "15px", "fontFamily": "Bahnschrift"})("MAIN ROLE")
+                                    mui.Typography(variant="h6", style={"textAlign": "left", "fontSize": "15px", "fontFamily": "Bahnschrift"})(" " + str(main_role))
+
+        # Initialize the layout using st.columns after the profile card
+        db1, db2 = st.columns([4.75, 4.05], gap='small')
+
+        # Radar Chart in Column 1 (db1)
+        with db1:
+            layout_radar = [
+                dashboard.Item("radar_chart", x=0, y=0, w=10, h=3.77),
+            ]
+            with elements("dashboard_radar"):
+                with dashboard.Grid(layout_radar, draggableHandle=".draggable", resizable=True):
+                    # Radar Chart
+                    with mui.Paper(key="radar_chart", elevation=3, style={"padding": "2px", "backgroundColor": "#ffffff"}):
+                        html.img(src=f"data:image/png;base64,{encoded_img}", style={"width": "100%", "height": "100%"})
+
+        # Swarm Plot and Passing Profile in Column 2 (db2)
+        with db2:
+            layout_swarm_passing = [
+                dashboard.Item("swarm_plot", x=0, y=0, w=4.75, h=1.90),
+                dashboard.Item("passing_profile", x=0, y=5, w=4.75, h=1.87)
+            ]
+            with elements("dashboard_swarm_passing"):
+                with dashboard.Grid(layout_swarm_passing, draggableHandle=".draggable", resizable=True):
+                    # Swarm Plot
+                    with mui.Paper(key="swarm_plot", elevation=3, style={"padding": "2px", "backgroundColor": "#ffffff"}):
+                        html.h4("Role Profile Style", style={"textAlign": "center", "margin": "0px", "color": "#000000", "lineHeight": "18px",
+                                                            "padding": "5px 0px 0px 0px", "fontFamily": "Bahnschrift", "fontSize": "14px",
+                                                            "backgroundColor": "#e6e6e6"})
+                        html.iframe(src=html_data_url, style={"padding": "3px 0px 0px 0px", "width": "99.5%", "height": "100%", "border": "none", "transform": "scale(1.04)"})
+
+                    # Passing Profile
+                    with mui.Paper(key="passing_profile", elevation=3, style={"padding": "2px", "backgroundColor": "#ffffff"}):
+                        html.h4("Passing Style", style={"textAlign": "center", "margin": "0px", "color": "#000000", "lineHeight": "18px",
+                                                        "padding": "4px 0px 4px 0px", "fontFamily": "Bahnschrift", "fontSize": "14px",
+                                                        "backgroundColor": "#e6e6e6"})
+                        html.img(src=f"data:image/png;base64,{encoded_img3}", style={"width": "99.5%", "height": "91%"})
+                                
         display_name = db_player['name'].iloc[0]
 
     #     def generate_pdf(encoded_img, encoded_img3, fig2):
