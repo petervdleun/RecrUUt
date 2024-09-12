@@ -16,3 +16,4 @@ reportlab
 setuptools
 openpyxl
 kaleido
+st_mui_table
