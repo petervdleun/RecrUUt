@@ -1719,4 +1719,3 @@ with tab4:
 
     # Text to display at the top of the app
     st.write("Data updated per 12-09-2024")
-    st.dataframe(merged_data)
