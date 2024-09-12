@@ -1625,16 +1625,6 @@ with tab4:
     # Step 8: Exclude rows where 'on_loan_from' has a value (i.e., where it's not NaN)
     filtered_data = filtered_data[pd.isna(filtered_data['on_loan_from'])]
 
-    # Step 9: Select specific columns to display
-    columns_to_display = [
-        'player_name',
-        'birth_date_age',
-        'current_team', 
-        'contract_end_date', 
-        'contract_option', 
-        'agency'
-    ]
-
     # Replace NaN or None values with empty strings
     filtered_data = filtered_data.fillna('')
 
@@ -1646,7 +1636,7 @@ with tab4:
         filtered_data = filtered_data[filtered_data['contract_option'] == '']
 
     # Step 9: Select specific columns to display
-    columns_to_display = ['player_name', 'current_team', 'contract_end_date', 'contract_option', 'agency']
+    columns_to_display = ['player_name', 'birth_date_age', 'current_team', 'contract_end_date', 'contract_option', 'agency']
 
     # Filter the data based on selected columns
     filtered_data = filtered_data[columns_to_display]
