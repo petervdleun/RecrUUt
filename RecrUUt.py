@@ -1589,7 +1589,7 @@ with tab4:
     player_data = pd.read_csv(player_data)
     team_data = os.path.join('data', 'tm_team_info.csv')
     team_data = pd.read_csv(team_data)
-    helper_data = pd.read_excel('tm_helper.xlsx')
+    helper_data = pd.read_excel('data/tm_helper.xlsx')
 
     # Step 2: Perform a left join on 'current_team' and 'team_name'
     merged_data = pd.merge(player_data, team_data, how='left', left_on='current_team', right_on='team_name')
