@@ -1585,7 +1585,7 @@ with tab3:
 
 with tab4:
     # Step 1: Read CSV files
-    player_data = os.path.join('data', 'tm_player_merged_1109.csv')
+    player_data = os.path.join('data', 'tm_player_merged_1209.csv')
     player_data = pd.read_csv(player_data)
     team_data = os.path.join('data', 'tm_team_info.csv')
     team_data = pd.read_csv(team_data)
@@ -1627,7 +1627,8 @@ with tab4:
 
     # Step 9: Select specific columns to display
     columns_to_display = [
-        'player_name', 
+        'player_name',
+        'birth_date_age',
         'current_team', 
         'contract_end_date', 
         'contract_option', 
@@ -1707,6 +1708,7 @@ with tab4:
     # Rename the columns for display in the table
     filtered_data = filtered_data.rename(columns={
         'player_name': 'Player',
+        'birth_date_age': 'DOB',
         'current_team': 'Team',
         'contract_end_date': 'Contract',
         'contract_option': 'Option',
@@ -1726,4 +1728,4 @@ with tab4:
     )
 
     # Text to display at the top of the app
-    st.write("Data updated per 11-09-2024")
+    st.write("Data updated per 12-09-2024")
