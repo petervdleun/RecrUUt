@@ -23,6 +23,7 @@ from streamlit_elements import elements, mui, dashboard, html
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from st_mui_table import st_mui_table
 
 st.set_page_config(layout='wide')
 
@@ -770,7 +771,7 @@ template_role_mapping = {
     'ST': ['Deep-Lying Striker', 'Poacher', 'Target']
 }
 
-tab1, tab2, tab3 = st.tabs(['Player Card', 'Glossary', 'Scheduling Tool'])
+tab1, tab2, tab3, tab4 = st.tabs(['Player Card', 'Glossary', 'Scheduling', 'Expiring Contracts'])
 
 with tab1:
 
@@ -1581,3 +1582,141 @@ with tab3:
                                 """, 
                                 unsafe_allow_html=True
                             )
+
+with tab4:
+    # Step 1: Read CSV files
+    player_data = os.path.join('data', 'tm_player_merged_1109.csv')
+    player_data = pd.read_csv(player_data)
+    team_data = os.path.join('data', 'tm_team_info.csv')
+    team_data = pd.read_csv(team_data)
+    helper_data = pd.read_excel('tm_helper.xlsx')
+
+    # Step 2: Perform a left join on 'current_team' and 'team_name'
+    merged_data = pd.merge(player_data, team_data, how='left', left_on='current_team', right_on='team_name')
+
+    # Step 3: Join 'merged_data' with 'helper_data' on 'competition_id' to get the 'country' column
+    merged_data = pd.merge(merged_data, helper_data[['competition_id', 'country']], how='left', on='competition_id')
+
+    # Step 4: Convert 'contract_end_date' to datetime format for filtering
+    merged_data['contract_end_date'] = pd.to_datetime(merged_data['contract_end_date'], format='%d-%m-%Y', errors='coerce')
+
+    # Step 5: Create columns to place filters side by side
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # Add a filter for contract_end_date (default to '30-06-2025')
+        default_date = pd.to_datetime('30-06-2025', format='%d-%m-%Y').date()
+        selected_date = st.date_input('Contract expiry date <=', default_date)
+
+    with col2:
+        # Add a filter for country (default to "Netherlands")
+        unique_countries = merged_data['country'].dropna().unique()
+        selected_country = st.selectbox('Filter by country', options=unique_countries, index=list(unique_countries).index('Netherlands'))
+
+    # Convert selected_date from date to datetime for comparison
+    selected_date = pd.to_datetime(selected_date)
+
+    # Step 7: Filter the data based on the selected contract_end_date and selected country
+    filtered_data = merged_data[(merged_data['contract_end_date'] <= selected_date) & (merged_data['country'] == selected_country)]
+
+    # Step 8: Format contract_end_date as 'dd-mm-yyyy'
+    filtered_data['contract_end_date'] = filtered_data['contract_end_date'].dt.strftime('%d-%m-%Y')
+
+    # Step 8: Exclude rows where 'on_loan_from' has a value (i.e., where it's not NaN)
+    filtered_data = filtered_data[pd.isna(filtered_data['on_loan_from'])]
+
+    # Step 9: Select specific columns to display
+    columns_to_display = [
+        'player_name', 
+        'current_team', 
+        'contract_end_date', 
+        'contract_option', 
+        'agency'
+    ]
+
+    # Replace NaN or None values with empty strings
+    filtered_data = filtered_data.fillna('')
+
+    # Step 9: Select specific columns to display
+    columns_to_display = ['player_name', 'current_team', 'contract_end_date', 'contract_option', 'agency']
+
+    # Filter the data based on selected columns
+    filtered_data = filtered_data[columns_to_display]
+
+    # Custom CSS to style the table with a black background and white text (including pagination controls)
+    custom_css = """
+        body {
+            background-color: black;
+        }
+        .MuiPaper-root {
+            background-color: #0e1117 !important;
+            border: none !important;  /* Remove any additional table border */
+        }
+        .MuiTable-root {
+            background-color: black;
+        }
+        .MuiTableCell-root {
+            color: white !important;  /* Make the font color white */
+            border: none !important;  /* Remove the cell borders */
+        }
+        .MuiTableHead-root .MuiTableCell-root {
+            background-color: #000000;
+            color: white !important;  /* Header font color white */
+        }
+
+        /* Styling for the Player name (pill-shaped background) */
+        .MuiTableBody-root .MuiTableCell-root:nth-of-type(1) div {
+            display: inline-block;
+            background-color: #d3d3d3;  /* Light gray background */
+            color: black !important;
+            padding: 3px 15px;
+            border-radius: 999px;  /* Create pill shape */
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .MuiTableHead-root .MuiTableCell-root {
+            font-weight: bold !important;  /* Make the headers bold */
+        }
+
+        /* Style pagination controls */
+        .MuiTablePagination-root {
+            color: white !important;
+        }
+        .MuiTablePagination-caption {
+            color: white !important;  /* Change font color for 'Rows per page' and the count display */
+        }
+        .MuiTablePagination-displayedRows {
+            margin-top: 17px !important;  /* Adjust this value to move the "1-10 of 340" text down */
+        }
+        .MuiTablePagination-actions button {
+            color: white !important;  /* Change button color for 'Next' and 'Previous' */
+        }
+        .MuiTablePagination-toolbar {
+            background-color: black;  /* Background color for pagination toolbar */
+        }
+    """
+
+    # Rename the columns for display in the table
+    filtered_data = filtered_data.rename(columns={
+        'player_name': 'Player',
+        'current_team': 'Team',
+        'contract_end_date': 'Contract',
+        'contract_option': 'Option',
+        'agency': 'Agency'
+    })
+
+    # Use st_mui_table to display the Material-UI table with custom CSS
+    st_mui_table(
+        filtered_data,
+        customCss=custom_css, 
+        size="small",
+        padding="normal",
+        paginationLabel="",
+        paginationSizes=[10],
+        showHeaders=True,
+        stickyHeader=True
+    )
+
+    # Text to display at the top of the app
+    st.write("Data updated per 11-09-2024")
