@@ -1637,6 +1637,13 @@ with tab4:
     # Replace NaN or None values with empty strings
     filtered_data = filtered_data.fillna('')
 
+    # Create a toggle switch to exclude rows with a value in 'contract_option'
+    exclude_contract_option = st.toggle('Exclude players with contract option', value=False)
+
+    if exclude_contract_option:
+        # Filter out rows where 'contract_option' is not empty (i.e., it has a value)
+        filtered_data = filtered_data[filtered_data['contract_option'] == '']
+
     # Step 9: Select specific columns to display
     columns_to_display = ['player_name', 'current_team', 'contract_end_date', 'contract_option', 'agency']
 
