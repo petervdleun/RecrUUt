@@ -1590,12 +1590,50 @@ with tab4:
     team_data = os.path.join('data', 'tm_team_info.csv')
     team_data = pd.read_csv(team_data)
     helper_data = pd.read_excel('data/tm_helper.xlsx')
+    matching_data = pd.read_excel('tm_wysc_match.xlsx')
+
+    # Create the list of unused Wyscout IDs
+    retired_ids = [
+        -170073, -457953, -539775, 521052, -385276, -48564, -557450, -614865, -527673,
+        -597541, -575123, -373379, -579481, -528757, -438643, -547779, -563859, -376296,
+        -602007, -574373, 511127, -567647, -558484, -487711, -365020, -473915, -209537,
+        -532760, -615635, -335222, -356840, -345431, -601708, -558785, -126876, -563905,
+        -463074, -608605, -467008, -46543, -362156, -491981, -437377, -587995, -595184,
+        -369154, -356831, -562079, -385402, -380359, -276876, -339072, -256209, -365394,
+        -390991, -245862, -615624, -555125, -486738, -557641, -538266, -596119, -532759,
+        -204993, -536184, -386919, -469490, -554956, -522710, -594475, -417992, -241388,
+        -364438, -538407, -561090, -606962, -462478, -367808, -608612, -401399, -606880,
+        -368956, -568189, -563868
+    ]
+
+    # Filter out rows where the 'wyscout_id' is in the unused_ids_list
+    matching_data_comp = matching_data[~matching_data['wyscout_id'].isin(retired_ids)]
 
     # Step 2: Perform a left join on 'current_team' and 'team_name'
     merged_data = pd.merge(player_data, team_data, how='left', left_on='current_team', right_on='team_name')
 
     # Step 3: Join 'merged_data' with 'helper_data' on 'competition_id' to get the 'country' column
     merged_data = pd.merge(merged_data, helper_data[['competition_id', 'country']], how='left', on='competition_id')
+
+    # Step 4: Merge with 'tm_wysc_match' on 'player_id' from merged_data and 'tm_id' from matching_data_comp
+    merged_data = pd.merge(merged_data, matching_data_comp[['tm_id', 'wyscout_id']], how='left', left_on='player_id', right_on='tm_id')
+
+    # Step 1: Filter 'db' for season_id '2024-25'
+    db_filtered = db[db['season_id'] == '2024-25']
+
+    # Step 2: Merge 'db_filtered' with 'merged_data' on 'wyscout_id' and 'id'
+    db_filtered = db_filtered[['id', 'total_matches', 'minutes_on_field', 'primary_position', 'template_1']]
+
+    # Step 2: Group by 'id' (Wyscout ID) to aggregate statistics for players who played for multiple teams
+    db_aggregated = db_filtered.groupby('id').agg({
+        'total_matches': 'sum',
+        'minutes_on_field': 'sum',
+        'primary_position': 'first',  # You can choose how to handle this (first, mode, etc.)
+        'template_1': 'first'  # Adjust as needed
+    }).reset_index()
+
+    # Step 3: Perform the merge on 'wyscout_id' from 'merged_data' and 'id' from 'db_filtered'
+    merged_data = pd.merge(merged_data, db_aggregated, how='left', left_on='wyscout_id', right_on='id')
 
     # Step 4: Convert 'contract_end_date' to datetime format for filtering
     merged_data['contract_end_date'] = pd.to_datetime(merged_data['contract_end_date'], format='%d-%m-%Y', errors='coerce')
@@ -1628,6 +1666,9 @@ with tab4:
     # Replace NaN or None values with empty strings
     filtered_data = filtered_data.fillna('')
 
+    # Step 10: Add 'wyscout_match' column based on the presence of 'wyscout_id'
+    filtered_data['wyscout_match'] = filtered_data['wyscout_id'].apply(lambda x: '✔️' if x != '' else '❌')
+
     # Create a toggle switch to exclude rows with a value in 'contract_option'
     exclude_contract_option = st.toggle('Exclude players with contract option', value=False)
 
@@ -1636,7 +1677,7 @@ with tab4:
         filtered_data = filtered_data[filtered_data['contract_option'] == '']
 
     # Step 9: Select specific columns to display
-    columns_to_display = ['player_name', 'birth_date_age', 'current_team', 'contract_end_date', 'contract_option', 'agency']
+    columns_to_display = ['player_name', 'birth_date_age', 'current_team', 'contract_end_date', 'contract_option', 'agency', 'wyscout_match', 'total_matches', 'minutes_on_field']
 
     # Filter the data based on selected columns
     filtered_data = filtered_data[columns_to_display]
@@ -1651,19 +1692,19 @@ with tab4:
             border: none !important;  /* Remove any additional table border */
         }
         .MuiTable-root {
-            background-color: black;
+            background-color: #0e1117;
         }
         .MuiTableCell-root {
             color: white !important;  /* Make the font color white */
             border: none !important;  /* Remove the cell borders */
         }
         .MuiTableHead-root .MuiTableCell-root {
-            background-color: #000000;
+            background-color: #0e1117;
             color: white !important;  /* Header font color white */
         }
 
         /* Styling for the Player name (pill-shaped background) */
-        .MuiTableBody-root .MuiTableCell-root:nth-of-type(1) div {
+        .MuiTableBody-root .MuiTableCell-root:nth-of-type(2) div {
             display: inline-block;
             background-color: #d3d3d3;  /* Light gray background */
             color: black !important;
@@ -1671,6 +1712,21 @@ with tab4:
             border-radius: 999px;  /* Create pill shape */
             font-weight: bold;
             font-size: 13px;
+        }
+
+        /* Style the expand icons with white color and #0e1117 background */
+        .MuiIconButton-root {
+            color: white !important;  /* Set the icon color to white */
+            background-color: #0e1117 !important;  /* Set the background color to #0e1117 */
+            border-radius: 50%;  /* Make the background circular */
+            width: 30px;
+            height: 30px;
+        }
+
+        /* Remove the pill shape from the expanded columns */
+        .MuiTableBody-root .MuiTableCell-root:not(:first-of-type) {
+            background-color: #0e1117 !important;
+            color: white !important; /* Make other text white */
         }
 
         .MuiTableHead-root .MuiTableCell-root {
@@ -1702,8 +1758,14 @@ with tab4:
         'current_team': 'Team',
         'contract_end_date': 'Contract',
         'contract_option': 'Option',
-        'agency': 'Agency'
+        'agency': 'Agency',
+        'wyscout_match': 'Wyscout Match',
+        'total_matches': 'Games Played',
+        'minutes_on_field': 'Minutes'
     })
+
+    # Define the columns you want to show when the row is expanded
+    detail_columns = ['Games Played', 'Minutes']
 
     # Use st_mui_table to display the Material-UI table with custom CSS
     st_mui_table(
@@ -1712,10 +1774,13 @@ with tab4:
         size="small",
         padding="normal",
         paginationLabel="",
-        paginationSizes=[10],
+        paginationSizes=[10],  # Default to 10 rows by making 10 the first element
         showHeaders=True,
-        stickyHeader=True
+        stickyHeader=True,
+        detailColumns=detail_columns,
+        detailColNum=2,
+        detailsHeader='Performance 2024-25'
     )
 
-    # Text to display at the top of the app
+    # Text to display at the bottom of the app
     st.write("Data updated per 12-09-2024")
