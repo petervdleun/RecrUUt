@@ -1590,7 +1590,7 @@ with tab4:
     team_data = os.path.join('data', 'tm_team_info.csv')
     team_data = pd.read_csv(team_data)
     helper_data = pd.read_excel('data/tm_helper.xlsx')
-    matching_data = pd.read_excel('tm_wysc_match.xlsx')
+    matching_data = pd.read_excel('data/tm_wysc_match.xlsx')
 
     # Create the list of unused Wyscout IDs
     retired_ids = [
