@@ -1669,20 +1669,43 @@ with tab4:
     # Step 10: Add 'wyscout_match' column based on the presence of 'wyscout_id'
     filtered_data['wyscout_match'] = filtered_data['wyscout_id'].apply(lambda x: '✔️' if x != '' else '❌')
 
-    # Create a toggle switch to exclude rows with a value in 'contract_option'
+    # Step 8: Create a toggle switch to exclude rows with a value in 'contract_option'
     exclude_contract_option = st.toggle('Exclude players with contract option', value=False)
 
     if exclude_contract_option:
         # Filter out rows where 'contract_option' is not empty (i.e., it has a value)
         filtered_data = filtered_data[filtered_data['contract_option'] == '']
 
+    data_tag = [
+    654918, 250591, 288067, 607144, 361066, 534015, 548228, 666526, 
+    805451, 746974, 900072, 793702, 706889, 981693, 640432, 723008, 
+    957322, 738481, 910493, 775978, 738492, 519651
+    ]
+
+    # Add a toggle switch to filter only players with data tags
+    filter_tagged = st.toggle('Show only data tagged players', value=False)
+
+    # Add a new column 'tagged' to mark players with the data_tag
+    filtered_data['tagged'] = filtered_data['tm_id'].apply(lambda x: 'green-pill' if x in data_tag else 'default-pill')
+
+    # Apply the filter for tagged players based on the toggle
+    if filter_tagged:
+        filtered_data = filtered_data[filtered_data['tm_id'].isin(data_tag)]
+
     # Step 9: Select specific columns to display
-    columns_to_display = ['player_name', 'birth_date_age', 'current_team', 'contract_end_date', 'contract_option', 'agency', 'wyscout_match', 'total_matches', 'minutes_on_field']
+    columns_to_display = ['player_name', 'birth_date_age', 'current_team', 'contract_end_date', 'contract_option', 'agency', 'wyscout_match', 'total_matches', 'minutes_on_field', 'tagged']
 
     # Filter the data based on selected columns
-    filtered_data = filtered_data[columns_to_display]
+    filtered_data = filtered_data[columns_to_display]   
 
-    # Custom CSS to style the table with a black background and white text (including pagination controls)
+    # Modify the player name column to wrap the name with the appropriate CSS class
+    filtered_data['player_name'] = filtered_data.apply(
+        lambda row: f'<div class="{row["tagged"]}">{row["player_name"]}</div>', axis=1
+    )
+
+    # Drop the 'tagged' column after applying the styling (so it won't display in the table)
+    filtered_data = filtered_data.drop(columns=['tagged'])
+
     custom_css = """
         body {
             background-color: black;
@@ -1704,9 +1727,9 @@ with tab4:
         }
 
         /* Styling for the Player name (pill-shaped background) */
-        .MuiTableBody-root .MuiTableCell-root:nth-of-type(2) div {
+        .MuiTableBody-root .MuiTableCell-root:nth-of-type(2) div.default-pill {
             display: inline-block;
-            background-color: #d3d3d3;  /* Light gray background */
+            background-color: #d3d3d3;  /* Light gray background for default */
             color: black !important;
             padding: 3px 15px;
             border-radius: 999px;  /* Create pill shape */
@@ -1714,19 +1737,44 @@ with tab4:
             font-size: 13px;
         }
 
-        /* Style the expand icons with white color and #0e1117 background */
-        .MuiIconButton-root {
-            color: white !important;  /* Set the icon color to white */
-            background-color: #0e1117 !important;  /* Set the background color to #0e1117 */
-            border-radius: 50%;  /* Make the background circular */
-            width: 30px;
-            height: 30px;
+        /* Green pill background for tagged players */
+        .MuiTableBody-root .MuiTableCell-root:nth-of-type(2) div.green-pill {
+            display: inline-block;
+            background-color: #4CAF50 !important;  /* Green background for tagged players */
+            color: white !important;  /* Change font color to white for better contrast */
+            padding: 3px 15px;
+            border-radius: 999px;
+            font-weight: bold;
+            font-size: 13px;
         }
 
         /* Remove the pill shape from the expanded columns */
         .MuiTableBody-root .MuiTableCell-root:not(:first-of-type) {
             background-color: #0e1117 !important;
             color: white !important; /* Make other text white */
+        }
+
+        /* Remove background color from selected row */
+        .MuiTableRow-root.selected-row {
+            background-color: transparent !important;
+        }
+
+        /* Overriding hover and focus behavior of selected row */
+        .MuiTableRow-root:hover {
+            background-color: #0e1117 !important;
+        }
+
+        /* Overriding the focus (active) state for selected rows */
+        .MuiTableRow-root:focus, .MuiTableRow-root:active, .MuiTableRow-root:focus-within {
+            background-color: transparent !important;
+        }
+
+        .MuiIconButton-root {
+            color: white !important;  /* Set the icon color to white */
+            background-color: #0e1117 !important;  /* Set the background color to #0e1117 */
+            border-radius: 50%;  /* Make the background circular */
+            width: 30px;
+            height: 30px;
         }
 
         .MuiTableHead-root .MuiTableCell-root {
@@ -1770,7 +1818,7 @@ with tab4:
     # Use st_mui_table to display the Material-UI table with custom CSS
     st_mui_table(
         filtered_data,
-        customCss=custom_css, 
+        customCss=custom_css,
         size="small",
         padding="normal",
         paginationLabel="",
