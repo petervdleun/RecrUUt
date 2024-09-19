@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from dateutil import parser
 from matplotlib.patches import Patch
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-from datetime import datetime
+from datetime import datetime, timedelta
 from difflib import get_close_matches
 from PIL import Image
 from io import BytesIO
