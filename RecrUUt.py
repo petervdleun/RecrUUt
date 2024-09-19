@@ -1371,6 +1371,7 @@ with tab3:
     seasons = [2024] * 11 + [2023] * 2
     
     # Function to scrape data for multiple leagues
+    @st.cache_data
     def scrape_games(countries, leagues, league_codes, seasons):
         all_games = []
         
@@ -1450,6 +1451,11 @@ with tab3:
         # Replace multiple values using the dictionary
         match_data['League'] = match_data['League'].replace(league_names)
 
+        # Filter to include only games from today and beyond
+        today = datetime.today().date()
+        one_month_later = today + timedelta(days=30)  # One month from today
+        match_data = match_data[(match_data['Date'] >= today) & (match_data['Date'] <= one_month_later)].reset_index(drop=True)
+
         return match_data
     
     # Streamlit UI
@@ -1465,15 +1471,32 @@ with tab3:
 
     if st.session_state['match_data'] is not None:
         match_data = st.session_state['match_data']
-        # Filter to include only games from today and beyond
-        today = datetime.today().date()
-        match_data = match_data[match_data['Date'] >= today].reset_index(drop=True)
 
-        # Get unique leagues for the multiselect
-        unique_leagues = match_data['League'].unique()
+        @st.cache_data
+        def get_unique_leagues(match_data):
+            return match_data['League'].unique()
 
-        # Multiselect for filtering
-        selected_leagues = st.multiselect('Leagues', unique_leagues, default=unique_leagues)
+        unique_leagues = get_unique_leagues(match_data)
+
+        # Pre-select "Eredivisie", "KKD", and "O21 Divisie 1" by default
+        default_selected = ["Eredivisie", "KKD", "O21 Divisie 1"]
+
+        # Define how many columns per row
+        columns_per_row = 5
+
+        # Create checkboxes for each league, distributing them across multiple rows
+        selected_leagues = []
+        rows = [st.columns(columns_per_row) for _ in range((len(unique_leagues) + columns_per_row - 1) // columns_per_row)]
+        
+        for i, league in enumerate(unique_leagues):
+            row_idx = i // columns_per_row
+            col_idx = i % columns_per_row
+            with rows[row_idx][col_idx]:
+                if st.checkbox(label=f"{league}".replace(".", "\\."), value=league in default_selected):
+                    selected_leagues.append(league)
+
+        # # Multiselect for filtering
+        # selected_leagues = st.multiselect('Leagues', unique_leagues, default=["Eredivisie", "KKD", "O21 Divisie 1"])
 
         # Filter the data based on the selected leagues
         if selected_leagues:
@@ -1677,11 +1700,11 @@ with tab4:
         filtered_data = filtered_data[filtered_data['contract_option'] == '']
 
     data_tag = [
-    654918, 250591, 288067, 607144, 361066, 534015, 548228, 666526, 
-    805451, 746974, 900072, 793702, 706889, 981693, 640432, 723008, 
+    654918, 250591, 288067, 607144, 361066, 534015, 666526, 
+    746974, 900072, 793702, 706889, 981693, 640432, 723008, 
     957322, 738481, 910493, 775978, 738492, 519651, 423604, 705991,
     680218, 743379, 1163778, 452584, 316709, 740615, 1029619, 1105541,
-    671678, 433129, 859923, 981397
+    671678, 433129, 859923, 981397, 794777, 261963, 1069559
     ]
 
     # Add a toggle switch to filter only players with data tags
