@@ -1630,7 +1630,7 @@ with tab4:
     ]
 
     # Filter out rows where the 'wyscout_id' is in the unused_ids_list
-    matching_data_comp = matching_data[~matching_data['wyscout_id'].isin(retired_ids)]
+    matching_data_comp = matching_data.loc[~matching_data['wyscout_id'].isin(retired_ids)]
 
     # Step 2: Perform a left join on 'current_team' and 'team_name'
     merged_data = pd.merge(player_data, team_data, how='left', left_on='current_team', right_on='team_name')
@@ -1697,7 +1697,7 @@ with tab4:
 
     if exclude_contract_option:
         # Filter out rows where 'contract_option' is not empty (i.e., it has a value)
-        filtered_data = filtered_data[filtered_data['contract_option'] == '']
+        filtered_data = filtered_data.loc[filtered_data['contract_option'] == '']
 
     data_tag = [
     654918, 250591, 288067, 607144, 361066, 534015, 666526, 
