@@ -789,8 +789,8 @@ with tab1:
         df_ratings.loc[:, 'Selected'] = df_ratings['Player'] == selected_player_name
         df_ratings_filtered = df_ratings[['Player', 'Team', 'Selected'] + roles_to_display]
 
-        # Step 1: Filter the DataFrame to get the row for the selected player
-        selected_player_row = df_ratings_filtered[df_ratings_filtered['Selected'] == True]
+        # Filter the DataFrame using .loc to get the row for the selected player
+        selected_player_row = df_ratings_filtered.loc[df_ratings_filtered['Selected'] == True]
         role_columns = df_ratings_filtered.columns.difference(['Player', 'Team', 'Selected'])
         main_role = selected_player_row[role_columns].idxmax(axis=1).values[0]
 
