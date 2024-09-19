@@ -786,7 +786,7 @@ with tab1:
         df_ratings = ratings_df(template_players_data)
 
         # Add a column to identify the selected player
-        df_ratings['Selected'] = df_ratings['Player'] == selected_player_name
+        df_ratings.loc[:, 'Selected'] = df_ratings['Player'] == selected_player_name
         df_ratings_filtered = df_ratings[['Player', 'Team', 'Selected'] + roles_to_display]
 
         # Step 1: Filter the DataFrame to get the row for the selected player
