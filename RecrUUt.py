@@ -1674,13 +1674,6 @@ with col2:
     unique_countries = merged_data['country'].dropna().unique()
     selected_country = st.selectbox('Filter by country', options=unique_countries, index=list(unique_countries).index('Netherlands'))
 
-with col3:
-    # Add a filter for team (default to "All Teams")
-    unique_teams = merged_data['current_team'].dropna().unique()
-    unique_teams = sorted(list(unique_teams))  # Sort teams alphabetically
-    unique_teams.insert(0, "All Teams")  # Add "All Teams" as the default option
-    selected_team = st.selectbox('Filter by team', options=unique_teams, index=0)
-
 # Convert selected_date from date to datetime for comparison
 selected_date = pd.to_datetime(selected_date)
 
