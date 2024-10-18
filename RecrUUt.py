@@ -1661,31 +1661,31 @@ with tab4:
     # Step 4: Convert 'contract_end_date' to datetime format for filtering
     merged_data['contract_end_date'] = pd.to_datetime(merged_data['contract_end_date'], format='%d-%m-%Y', errors='coerce')
 
-# Step 5: Create columns to place filters side by side
-col1, col2, col3 = st.columns(3)  # Add col3 for team filter
+    # Step 5: Create columns to place filters side by side
+    col1, col2, col3 = st.columns(3)  # Add col3 for team filter
 
-with col1:
-    # Add a filter for contract_end_date (default to '30-06-2025')
-    default_date = pd.to_datetime('30-06-2025', format='%d-%m-%Y').date()
-    selected_date = st.date_input('Contract expiry date <=', default_date)
+    with col1:
+        # Add a filter for contract_end_date (default to '30-06-2025')
+        default_date = pd.to_datetime('30-06-2025', format='%d-%m-%Y').date()
+        selected_date = st.date_input('Contract expiry date <=', default_date)
 
-with col2:
-    # Add a filter for country (default to "Netherlands")
-    unique_countries = merged_data['country'].dropna().unique()
-    selected_country = st.selectbox('Filter by country', options=unique_countries, index=list(unique_countries).index('Netherlands'))
+    with col2:
+        # Add a filter for country (default to "Netherlands")
+        unique_countries = merged_data['country'].dropna().unique()
+        selected_country = st.selectbox('Filter by country', options=unique_countries, index=list(unique_countries).index('Netherlands'))
 
-# Convert selected_date from date to datetime for comparison
-selected_date = pd.to_datetime(selected_date)
+    # Convert selected_date from date to datetime for comparison
+    selected_date = pd.to_datetime(selected_date)
 
-# Step 7: Filter the data based on the selected contract_end_date and selected country
-filtered_data = merged_data[(merged_data['contract_end_date'] <= selected_date) & (merged_data['country'] == selected_country)]
+    # Step 7: Filter the data based on the selected contract_end_date and selected country
+    filtered_data = merged_data[(merged_data['contract_end_date'] <= selected_date) & (merged_data['country'] == selected_country)]
 
-with col3:
-    # Add a filter for team (default to "All Teams")
-    unique_teams = filtered_data['current_team'].dropna().unique()  # Get teams from filtered data
-    unique_teams = sorted(list(unique_teams))  # Sort teams alphabetically
-    unique_teams.insert(0, "All Teams")  # Add "All Teams" as the default option
-    selected_team = st.selectbox('Filter by team', options=unique_teams, index=0)
+    with col3:
+        # Add a filter for team (default to "All Teams")
+        unique_teams = filtered_data['current_team'].dropna().unique()  # Get teams from filtered data
+        unique_teams = sorted(list(unique_teams))  # Sort teams alphabetically
+        unique_teams.insert(0, "All Teams")  # Add "All Teams" as the default option
+        selected_team = st.selectbox('Filter by team', options=unique_teams, index=0)
 
     # Apply team filter if a specific team is selected (not "All Teams")
     if selected_team != "All Teams":
