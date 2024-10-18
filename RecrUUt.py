@@ -1687,185 +1687,185 @@ with col3:
     unique_teams.insert(0, "All Teams")  # Add "All Teams" as the default option
     selected_team = st.selectbox('Filter by team', options=unique_teams, index=0)
 
-# Apply team filter if a specific team is selected (not "All Teams")
-if selected_team != "All Teams":
-    filtered_data = filtered_data[filtered_data['current_team'] == selected_team]
+    # Apply team filter if a specific team is selected (not "All Teams")
+    if selected_team != "All Teams":
+        filtered_data = filtered_data[filtered_data['current_team'] == selected_team]
 
-# Step 8: Format contract_end_date as 'dd-mm-yyyy'
-filtered_data['contract_end_date'] = filtered_data['contract_end_date'].dt.strftime('%d-%m-%Y')
+    # Step 8: Format contract_end_date as 'dd-mm-yyyy'
+    filtered_data['contract_end_date'] = filtered_data['contract_end_date'].dt.strftime('%d-%m-%Y')
 
-# Step 8: Exclude rows where 'on_loan_from' has a value (i.e., where it's not NaN)
-filtered_data = filtered_data[pd.isna(filtered_data['on_loan_from'])]
+    # Step 8: Exclude rows where 'on_loan_from' has a value (i.e., where it's not NaN)
+    filtered_data = filtered_data[pd.isna(filtered_data['on_loan_from'])]
 
-# Replace NaN or None values with empty strings
-filtered_data = filtered_data.fillna('')
+    # Replace NaN or None values with empty strings
+    filtered_data = filtered_data.fillna('')
 
-# Step 10: Add 'wyscout_match' column based on the presence of 'wyscout_id'
-filtered_data['wyscout_match'] = filtered_data['wyscout_id'].apply(lambda x: '✔️' if x != '' else '❌')
+    # Step 10: Add 'wyscout_match' column based on the presence of 'wyscout_id'
+    filtered_data['wyscout_match'] = filtered_data['wyscout_id'].apply(lambda x: '✔️' if x != '' else '❌')
 
-# Step 8: Create a toggle switch to exclude rows with a value in 'contract_option'
-exclude_contract_option = st.toggle('Exclude players with contract option', value=False)
+    # Step 8: Create a toggle switch to exclude rows with a value in 'contract_option'
+    exclude_contract_option = st.toggle('Exclude players with contract option', value=False)
 
-if exclude_contract_option:
-    # Filter out rows where 'contract_option' is not empty (i.e., it has a value)
-    filtered_data = filtered_data.loc[filtered_data['contract_option'] == '']
+    if exclude_contract_option:
+        # Filter out rows where 'contract_option' is not empty (i.e., it has a value)
+        filtered_data = filtered_data.loc[filtered_data['contract_option'] == '']
 
-data_tag = [
-654918, 250591, 288067, 607144, 361066, 534015, 666526, 
-746974, 900072, 793702, 706889, 981693, 640432, 723008, 
-957322, 738481, 910493, 775978, 738492, 519651, 423604, 705991,
-680218, 743379, 1163778, 452584, 316709, 740615, 1029619, 1105541,
-671678, 433129, 859923, 981397, 794777, 261963, 1069559,
-851385, 1231478, 1032525, 878064, 1051640, 1240699, 1051640
-]
+    data_tag = [
+    654918, 250591, 288067, 607144, 361066, 534015, 666526, 
+    746974, 900072, 793702, 706889, 981693, 640432, 723008, 
+    957322, 738481, 910493, 775978, 738492, 519651, 423604, 705991,
+    680218, 743379, 1163778, 452584, 316709, 740615, 1029619, 1105541,
+    671678, 433129, 859923, 981397, 794777, 261963, 1069559,
+    851385, 1231478, 1032525, 878064, 1051640, 1240699, 1051640
+    ]
 
-# Add a toggle switch to filter only players with data tags
-filter_tagged = st.toggle('Show only data tagged players', value=False)
+    # Add a toggle switch to filter only players with data tags
+    filter_tagged = st.toggle('Show only data tagged players', value=False)
 
-# Add a new column 'tagged' to mark players with the data_tag
-filtered_data['tagged'] = filtered_data['tm_id'].apply(lambda x: 'green-pill' if x in data_tag else 'default-pill')
+    # Add a new column 'tagged' to mark players with the data_tag
+    filtered_data['tagged'] = filtered_data['tm_id'].apply(lambda x: 'green-pill' if x in data_tag else 'default-pill')
 
-# Apply the filter for tagged players based on the toggle
-if filter_tagged:
-    filtered_data = filtered_data[filtered_data['tm_id'].isin(data_tag)]
+    # Apply the filter for tagged players based on the toggle
+    if filter_tagged:
+        filtered_data = filtered_data[filtered_data['tm_id'].isin(data_tag)]
 
-# Step 9: Select specific columns to display
-columns_to_display = ['player_name', 'birth_date_age', 'current_team', 'contract_end_date', 'contract_option', 'agency', 'wyscout_match', 'total_matches', 'minutes_on_field', 'tagged']
+    # Step 9: Select specific columns to display
+    columns_to_display = ['player_name', 'birth_date_age', 'current_team', 'contract_end_date', 'contract_option', 'agency', 'wyscout_match', 'total_matches', 'minutes_on_field', 'tagged']
 
-# Filter the data based on selected columns
-filtered_data = filtered_data[columns_to_display]   
+    # Filter the data based on selected columns
+    filtered_data = filtered_data[columns_to_display]   
 
-# Modify the player name column to wrap the name with the appropriate CSS class
-filtered_data['player_name'] = filtered_data.apply(
-    lambda row: f'<div class="{row["tagged"]}">{row["player_name"]}</div>', axis=1
-)
+    # Modify the player name column to wrap the name with the appropriate CSS class
+    filtered_data['player_name'] = filtered_data.apply(
+        lambda row: f'<div class="{row["tagged"]}">{row["player_name"]}</div>', axis=1
+    )
 
-# Drop the 'tagged' column after applying the styling (so it won't display in the table)
-filtered_data = filtered_data.drop(columns=['tagged'])
+    # Drop the 'tagged' column after applying the styling (so it won't display in the table)
+    filtered_data = filtered_data.drop(columns=['tagged'])
 
-custom_css = """
-    body {
-        background-color: black;
-    }
-    .MuiPaper-root {
-        background-color: #0e1117 !important;
-        border: none !important;  /* Remove any additional table border */
-    }
-    .MuiTable-root {
-        background-color: #0e1117;
-    }
-    .MuiTableCell-root {
-        color: white !important;  /* Make the font color white */
-        border: none !important;  /* Remove the cell borders */
-    }
-    .MuiTableHead-root .MuiTableCell-root {
-        background-color: #0e1117;
-        color: white !important;  /* Header font color white */
-    }
+    custom_css = """
+        body {
+            background-color: black;
+        }
+        .MuiPaper-root {
+            background-color: #0e1117 !important;
+            border: none !important;  /* Remove any additional table border */
+        }
+        .MuiTable-root {
+            background-color: #0e1117;
+        }
+        .MuiTableCell-root {
+            color: white !important;  /* Make the font color white */
+            border: none !important;  /* Remove the cell borders */
+        }
+        .MuiTableHead-root .MuiTableCell-root {
+            background-color: #0e1117;
+            color: white !important;  /* Header font color white */
+        }
 
-    /* Styling for the Player name (pill-shaped background) */
-    .MuiTableBody-root .MuiTableCell-root:nth-of-type(2) div.default-pill {
-        display: inline-block;
-        background-color: #d3d3d3;  /* Light gray background for default */
-        color: black !important;
-        padding: 3px 15px;
-        border-radius: 999px;  /* Create pill shape */
-        font-weight: bold;
-        font-size: 13px;
-    }
+        /* Styling for the Player name (pill-shaped background) */
+        .MuiTableBody-root .MuiTableCell-root:nth-of-type(2) div.default-pill {
+            display: inline-block;
+            background-color: #d3d3d3;  /* Light gray background for default */
+            color: black !important;
+            padding: 3px 15px;
+            border-radius: 999px;  /* Create pill shape */
+            font-weight: bold;
+            font-size: 13px;
+        }
 
-    /* Green pill background for tagged players */
-    .MuiTableBody-root .MuiTableCell-root:nth-of-type(2) div.green-pill {
-        display: inline-block;
-        background-color: #4CAF50 !important;  /* Green background for tagged players */
-        color: white !important;  /* Change font color to white for better contrast */
-        padding: 3px 15px;
-        border-radius: 999px;
-        font-weight: bold;
-        font-size: 13px;
-    }
+        /* Green pill background for tagged players */
+        .MuiTableBody-root .MuiTableCell-root:nth-of-type(2) div.green-pill {
+            display: inline-block;
+            background-color: #4CAF50 !important;  /* Green background for tagged players */
+            color: white !important;  /* Change font color to white for better contrast */
+            padding: 3px 15px;
+            border-radius: 999px;
+            font-weight: bold;
+            font-size: 13px;
+        }
 
-    /* Remove the pill shape from the expanded columns */
-    .MuiTableBody-root .MuiTableCell-root:not(:first-of-type) {
-        background-color: #0e1117 !important;
-        color: white !important; /* Make other text white */
-    }
+        /* Remove the pill shape from the expanded columns */
+        .MuiTableBody-root .MuiTableCell-root:not(:first-of-type) {
+            background-color: #0e1117 !important;
+            color: white !important; /* Make other text white */
+        }
 
-    /* Remove background color from selected row */
-    .MuiTableRow-root.selected-row {
-        background-color: transparent !important;
-    }
+        /* Remove background color from selected row */
+        .MuiTableRow-root.selected-row {
+            background-color: transparent !important;
+        }
 
-    /* Overriding hover and focus behavior of selected row */
-    .MuiTableRow-root:hover {
-        background-color: #0e1117 !important;
-    }
+        /* Overriding hover and focus behavior of selected row */
+        .MuiTableRow-root:hover {
+            background-color: #0e1117 !important;
+        }
 
-    /* Overriding the focus (active) state for selected rows */
-    .MuiTableRow-root:focus, .MuiTableRow-root:active, .MuiTableRow-root:focus-within {
-        background-color: transparent !important;
-    }
+        /* Overriding the focus (active) state for selected rows */
+        .MuiTableRow-root:focus, .MuiTableRow-root:active, .MuiTableRow-root:focus-within {
+            background-color: transparent !important;
+        }
 
-    .MuiIconButton-root {
-        color: white !important;  /* Set the icon color to white */
-        background-color: #0e1117 !important;  /* Set the background color to #0e1117 */
-        border-radius: 50%;  /* Make the background circular */
-        width: 30px;
-        height: 30px;
-    }
+        .MuiIconButton-root {
+            color: white !important;  /* Set the icon color to white */
+            background-color: #0e1117 !important;  /* Set the background color to #0e1117 */
+            border-radius: 50%;  /* Make the background circular */
+            width: 30px;
+            height: 30px;
+        }
 
-    .MuiTableHead-root .MuiTableCell-root {
-        font-weight: bold !important;  /* Make the headers bold */
-    }
+        .MuiTableHead-root .MuiTableCell-root {
+            font-weight: bold !important;  /* Make the headers bold */
+        }
 
-    /* Style pagination controls */
-    .MuiTablePagination-root {
-        color: white !important;
-    }
-    .MuiTablePagination-caption {
-        color: white !important;  /* Change font color for 'Rows per page' and the count display */
-    }
-    .MuiTablePagination-displayedRows {
-        margin-top: 17px !important;  /* Adjust this value to move the "1-10 of 340" text down */
-    }
-    .MuiTablePagination-actions button {
-        color: white !important;  /* Change button color for 'Next' and 'Previous' */
-    }
-    .MuiTablePagination-toolbar {
-        background-color: black;  /* Background color for pagination toolbar */
-    }
-"""
+        /* Style pagination controls */
+        .MuiTablePagination-root {
+            color: white !important;
+        }
+        .MuiTablePagination-caption {
+            color: white !important;  /* Change font color for 'Rows per page' and the count display */
+        }
+        .MuiTablePagination-displayedRows {
+            margin-top: 17px !important;  /* Adjust this value to move the "1-10 of 340" text down */
+        }
+        .MuiTablePagination-actions button {
+            color: white !important;  /* Change button color for 'Next' and 'Previous' */
+        }
+        .MuiTablePagination-toolbar {
+            background-color: black;  /* Background color for pagination toolbar */
+        }
+    """
 
-# Rename the columns for display in the table
-filtered_data = filtered_data.rename(columns={
-    'player_name': 'Player',
-    'birth_date_age': 'DOB',
-    'current_team': 'Team',
-    'contract_end_date': 'Contract',
-    'contract_option': 'Option',
-    'agency': 'Agency',
-    'wyscout_match': 'Wyscout Match',
-    'total_matches': 'Games Played',
-    'minutes_on_field': 'Minutes'
-})
+    # Rename the columns for display in the table
+    filtered_data = filtered_data.rename(columns={
+        'player_name': 'Player',
+        'birth_date_age': 'DOB',
+        'current_team': 'Team',
+        'contract_end_date': 'Contract',
+        'contract_option': 'Option',
+        'agency': 'Agency',
+        'wyscout_match': 'Wyscout Match',
+        'total_matches': 'Games Played',
+        'minutes_on_field': 'Minutes'
+    })
 
-# Define the columns you want to show when the row is expanded
-detail_columns = ['Games Played', 'Minutes']
+    # Define the columns you want to show when the row is expanded
+    detail_columns = ['Games Played', 'Minutes']
 
-# Use st_mui_table to display the Material-UI table with custom CSS
-st_mui_table(
-    filtered_data,
-    customCss=custom_css,
-    size="small",
-    padding="normal",
-    paginationLabel="",
-    paginationSizes=[10],  # Default to 10 rows by making 10 the first element
-    showHeaders=True,
-    stickyHeader=True,
-    detailColumns=detail_columns,
-    detailColNum=2,
-    detailsHeader='Performance 2024-25'
-)
+    # Use st_mui_table to display the Material-UI table with custom CSS
+    st_mui_table(
+        filtered_data,
+        customCss=custom_css,
+        size="small",
+        padding="normal",
+        paginationLabel="",
+        paginationSizes=[10],  # Default to 10 rows by making 10 the first element
+        showHeaders=True,
+        stickyHeader=True,
+        detailColumns=detail_columns,
+        detailColNum=2,
+        detailsHeader='Performance 2024-25'
+    )
 
-# Text to display at the bottom of the app
-st.write("Contract information updated per 12-09-2024")
+    # Text to display at the bottom of the app
+    st.write("Contract information updated per 12-09-2024")
