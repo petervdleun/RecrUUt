@@ -23,7 +23,7 @@ def decompress_db_file(db_path):
     return decompressed_path
 
 def connect_db():
-    db_path = 'wysc.db.gz'
+    db_path = 'data/wysc.db.gz'
     decompressed_path = decompress_db_file(db_path)
     return sqlite3.connect(decompressed_path)
 
