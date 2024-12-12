@@ -1548,7 +1548,7 @@ def main():
             unsafe_allow_html=True
         )
 
-        st.image("logo-fcu.png", width=50, use_column_width=False)
+        st.image("logo-fcu.png", width=20, use_container_width=False)
 
         # Sidebar menu for tab selection
         st.session_state['active_tab'] = option_menu(
