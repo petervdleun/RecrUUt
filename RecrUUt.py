@@ -1540,11 +1540,11 @@ def main():
     with st.sidebar:
 
         # Create three columns
-        col1, col2, col3 = st.columns([3.5, 2, 3.5])  # Adjust column widths if needed
+        col1, col2, col3 = st.columns([4, 2, 4])  # Adjust column widths if needed
 
         # Place the image in the center column
         with col2:
-            st.image("logo-fcu.png", width=40, use_container_width=False)
+            st.image("logo-fcu.png", width=45, use_container_width=False)
 
         # Custom title with styled "UU" in RECRUUT
         st.markdown(
