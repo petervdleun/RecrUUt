@@ -1548,15 +1548,14 @@ def main():
             unsafe_allow_html=True
         )
 
-        # Add a small, centered image
         st.markdown(
             """
             <div style="text-align: center; margin-bottom: 20px;">
-                <img src="logo-fcu.png" alt="FCU Logo" style="width: 100px; height: auto;">
             </div>
             """,
             unsafe_allow_html=True
         )
+        st.image("logo-fcu.png", caption="FCU Logo", width=100)
 
         # Sidebar menu for tab selection
         st.session_state['active_tab'] = option_menu(
