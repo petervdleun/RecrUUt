@@ -1549,7 +1549,7 @@ def main():
         )
 
         # Create three columns
-        col1, col2, col3 = st.columns([2, 2, 2])  # Adjust column widths if needed
+        col1, col2, col3 = st.columns([2.5, 2, 2.5])  # Adjust column widths if needed
 
         # Place the image in the center column
         with col2:
