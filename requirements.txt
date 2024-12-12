@@ -7,4 +7,3 @@ streamlit-shadcn-ui
 streamlit-option-menu
 unidecode
 pycountry
-gzip
