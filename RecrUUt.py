@@ -1548,24 +1548,7 @@ def main():
             unsafe_allow_html=True
         )
 
-        # Use custom CSS to center the image
-        st.markdown(
-            """
-            <style>
-            .centered-image {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        # Add the image inside the centered container
-        st.markdown('<div class="centered-image">', unsafe_allow_html=True)
-        st.image("logo-fcu.png", width=50)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.image("logo-fcu.png", width=50, use_column_width=False)
 
         # Sidebar menu for tab selection
         st.session_state['active_tab'] = option_menu(
