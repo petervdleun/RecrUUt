@@ -1333,9 +1333,9 @@ def player_percentiles():
             st.write("No role score data available for this player.")
 
 # Function to load and join data
-def load_games_from_db(db_name="wysc.db"):
+def load_games_from_db():
     """Load games and join with scheduling_locations on home_team."""
-    conn = sqlite3.connect(db_name)
+    conn = connect_db()
 
     # Load scheduling_games and scheduling_locations, joining on home_team
     query = """
