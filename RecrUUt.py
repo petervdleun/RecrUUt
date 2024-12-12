@@ -1548,7 +1548,12 @@ def main():
             unsafe_allow_html=True
         )
 
-        st.image("logo-fcu.png", width=20, use_container_width=False)
+        # Create three columns
+        col1, col2, col3 = st.columns([1, 2, 1])  # Adjust column widths if needed
+
+        # Place the image in the center column
+        with col2:
+            st.image("logo-fcu.png", width=40, use_container_width=False)
 
         # Sidebar menu for tab selection
         st.session_state['active_tab'] = option_menu(
