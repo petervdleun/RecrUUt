@@ -1552,7 +1552,7 @@ def main():
         st.markdown(
             """
             <div style="text-align: center; margin-bottom: 20px;">
-                <img src="fcu.png" alt="FCU Logo" style="width: 100px; height: auto;">
+                <img src="fcu-logo.png" alt="FCU Logo" style="width: 100px; height: auto;">
             </div>
             """,
             unsafe_allow_html=True
