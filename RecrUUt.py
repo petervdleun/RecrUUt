@@ -34,6 +34,13 @@ def load_players():
         query = 'SELECT * FROM players'
         return pd.read_sql_query(query, conn)
     
+# Load player_positions data
+@st.cache_data
+def load_player_positions():
+    with connect_db() as conn:
+        query = 'SELECT * FROM player_positions'
+        return pd.read_sql_query(query, conn)
+    
 # Load players data
 @st.cache_data
 def load_logos():
@@ -139,7 +146,7 @@ def get_country_code(country_name):
     except LookupError:
         return None
 
-def display_player_profile(player_id, players_df):
+def display_player_profile(player_id, players_df, player_positions_df):
     player_data = players_df[players_df['player_id'] == player_id].iloc[0]
     player_image_url = player_data['image_url']
     player_name = player_data['full_name']
@@ -158,15 +165,33 @@ def display_player_profile(player_id, players_df):
     else:
         formatted_birth_date = "N/A"
 
+    # Get the main position from player_positions_df
+    main_position = None
+    player_position_data = player_positions_df[player_positions_df['player_id'] == player_id]
+    if not player_position_data.empty:
+        main_position = player_position_data.iloc[0]['position_1']
+
+    def get_background_color(position):
+        if position in ["Centre-Back", "Left-Back", "Right-Back"]:
+            return "#89cff0"  # Blue for defensive positions
+        elif position in ["Defensive-Midfield", "Centre-Midfield", "Attacking-Midfield"]:
+            return "#90ee90"  # Green for midfield positions
+        elif position in ["Left-Winger", "Striker", "Right-Winger"]:
+            return "#ff7e82"  # Red for attacking positions
+        else:
+            return "#6C757D"  # Gray for unknown or unspecified positions
+        
+    background_color = get_background_color(main_position)
+
     # Get the ISO Alpha-2 code for the flag
     country_code = get_country_code(birth_country)
     flag_url = f"https://flagcdn.com/w40/{country_code}.png" if country_code else None
 
     with st.container():
         st.markdown(
-            """
+            f"""
             <style>
-            .profile-card {
+            .profile-card {{
                 display: flex;
                 align-items: center;
                 background-color: #0e1117;
@@ -174,31 +199,40 @@ def display_player_profile(player_id, players_df):
                 margin-top: -15px;
                 margin-bottom: 10px;
                 color: white;
-            }
-            .profile-image {
+            }}
+            .profile-image {{
                 width: 100px;
                 height: 100px;
                 border-radius: 50%;
                 object-fit: cover;
                 margin-right: 20px;
                 border: 3px solid #4f4f4f;
-            }
-            .profile-details h3 {
+            }}
+            .profile-details h3 {{
                 margin: 0 0 -12px 0;
                 font-size: 24px;
                 display: flex;
                 align-items: center;
-            }
-            .profile-details h3 img {
+            }}
+            .profile-details h3 img {{
                 margin-left: 10px;
                 width: 24px;
                 height: 16px;
                 object-fit: cover;
-            }
-            .profile-details p {
+            }}
+            .profile-details p {{
                 margin: -3px 0 0 15px;
                 font-size: 16px;
-            }
+            }}
+            .profile-details .position-label {{
+                background-color: {background_color};
+                color: black;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 3px 10px;
+                border-radius: 8px;
+                margin-left: 10px;
+            }}
             </style>
             """,
             unsafe_allow_html=True
@@ -206,6 +240,7 @@ def display_player_profile(player_id, players_df):
 
         # Generate the HTML with the flag
         flag_html = f'<img src="{flag_url}" alt="{birth_country} flag" />' if flag_url else ''
+        main_position_html = f'<span class="position-label">{main_position}</span>' if main_position else ''
 
         st.markdown(
             f"""
@@ -213,7 +248,7 @@ def display_player_profile(player_id, players_df):
                 <img src="{player_image_url}" alt="Player Image" class="profile-image" />
                 <div class="profile-details">
                     <h3>{player_name} {flag_html}</h3>
-                    <p>{formatted_birth_date}</p>
+                    <p>{formatted_birth_date} {main_position_html}</p>
                 </div>
             </div>
             """,
