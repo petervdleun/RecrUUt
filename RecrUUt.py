@@ -910,7 +910,8 @@ def player_percentiles():
         st.session_state['selected_season'] = default_season
 
     # Profile card
-    display_player_profile(selected_player_id, players_df)
+    player_positions_df = load_player_positions()
+    display_player_profile(selected_player_id, players_df, player_positions_df)
 
     # Set up the styled tabs using streamlit-option-menu
     selected_tab = option_menu(
