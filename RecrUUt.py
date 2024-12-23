@@ -1,17 +1,16 @@
 import sqlite3
 import pandas as pd
 import streamlit as st
-from PIL import Image
-import requests
-from io import BytesIO
+# from PIL import Image
+# from io import BytesIO
 import plotly.graph_objs as go
-import streamlit_shadcn_ui as ui
 from streamlit_option_menu import option_menu
 from unidecode import unidecode
 from datetime import datetime
 import textwrap
 import pycountry
 import gzip
+from collections import defaultdict
 
 st.set_page_config(layout='wide')
 
@@ -169,7 +168,28 @@ def display_player_profile(player_id, players_df, player_positions_df):
     main_position = None
     player_position_data = player_positions_df[player_positions_df['player_id'] == player_id]
     if not player_position_data.empty:
-        main_position = player_position_data.iloc[0]['position_1']
+        # Dictionary to store cumulative percentages and occurrence counts
+        position_aggregates = defaultdict(lambda: [0, 0])  # [total_percentage, count]
+
+        for _, row in player_position_data.iterrows():
+            positions = [
+                (row['position_1'], row['percent_1']),
+                (row['position_2'], row['percent_2']),
+                (row['position_3'], row['percent_3']),
+            ]
+            for pos, percent in positions:
+                if pd.notna(pos) and percent > 0:
+                    position_aggregates[pos][0] += percent  # Add to total percentage
+                    position_aggregates[pos][1] += 1        # Increment occurrence count
+
+        # Calculate average percentages for each position
+        position_averages = {
+            pos: total / count
+            for pos, (total, count) in position_aggregates.items()
+        }
+
+        # Determine the main position based on the highest average percentage
+        main_position = max(position_averages, key=position_averages.get)
 
     def get_background_color(position):
         if position in ["Centre-Back", "Left-Back", "Right-Back"]:
