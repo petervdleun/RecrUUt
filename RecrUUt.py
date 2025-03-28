@@ -32,7 +32,7 @@ def connect_db():
             with open(db_path, 'wb') as f_out:
                 f_out.write(f_in.read())
 
-    return sqlite3.connect(db_path)
+    return sqlite3.connect(db_path, check_same_thread=False)
 
 # Load players data
 @st.cache_data
