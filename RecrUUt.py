@@ -1987,18 +1987,19 @@ def display_shortlist():
         "loan": "Loan",
         "nat_youth": "National Youth"
     }
+    
     label_to_type = {v: k for k, v in shortlist_labels.items()}
 
-    # -- Filters: placed first so we can pass them into data loading
+    # -- Load data before rendering filters
+    players_df = get_cached_players()
+    positions_df = get_cached_positions()
+
+    # Shortlist label selectbox first (you already know this list)
     col1, col2 = st.columns([1, 1])
     with col1:
         selected_shortlist_label = st.selectbox("Shortlist Type", ["All"] + sorted(shortlist_labels.values()))
-    with col2:
-        selected_position = st.selectbox("Position", ["All Positions"])  # We'll fill this in later
 
-    # Load data
-    players_df = get_cached_players()
-    positions_df = get_cached_positions()
+    # Load shortlist based on label
     shortlist_data = get_shortlist_entries(selected_shortlist_label, label_to_type)
 
     if not shortlist_data:
@@ -2006,16 +2007,15 @@ def display_shortlist():
         return
 
     shortlist_df = pd.DataFrame(shortlist_data, columns=["player_id", "shortlist_type", "date_added"])
-
-    # Compute main positions
     main_positions = get_main_positions_vectorized(positions_df)
     players_df = players_df.merge(main_positions, on="player_id", how="left")
     merged_df = shortlist_df.merge(players_df, on="player_id", how="left")
 
-    # Update position filter now that we know them
-    if selected_position == "All Positions":
-        all_positions = sorted(merged_df["main_position"].dropna().unique())
-        selected_position = st.selectbox("Position", ["All Positions"] + all_positions, index=0)
+    # Now that we know the available positions, show the filter
+    all_positions = sorted(merged_df["main_position"].dropna().unique())
+
+    with col2:
+        selected_position = st.selectbox("Position", ["All Positions"] + all_positions)
 
     # Apply filters
     if selected_shortlist_label != "All":
