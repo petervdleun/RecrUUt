@@ -754,7 +754,7 @@ def display_pizza_chart(player_id, percentiles_df, season_id, competition_id, te
     # Corrected filtering line
     season_template_data = percentiles_df[
         (percentiles_df['season_id'] == season_id) & 
-        (percentiles_df['competition_id'] == competition_id) & 
+        (percentiles_df['competition_id'].astype(str) == str(competition_id)) &
         (percentiles_df['template'] == template)
     ]
     
@@ -849,7 +849,7 @@ def display_pizza_chart(player_id, percentiles_df, season_id, competition_id, te
 
     else:
         st.write("No percentile data available for this player in the selected season and competition.")
-
+        
 @st.cache_data
 def get_comparison_options(players_df, leagues_dict):
     """
@@ -1987,7 +1987,7 @@ def display_shortlist():
         "loan": "Loan",
         "nat_youth": "National Youth"
     }
-    
+
     label_to_type = {v: k for k, v in shortlist_labels.items()}
 
     # -- Load data before rendering filters
