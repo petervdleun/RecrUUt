@@ -14,17 +14,24 @@ from collections import defaultdict
 
 st.set_page_config(layout='wide')
 
-def decompress_db_file(db_path):
-    decompressed_path = db_path.replace('.gz', '')
-    with gzip.open(db_path, 'rb') as f_in:
-        with open(decompressed_path, 'wb') as f_out:
-            f_out.write(f_in.read())
-    return decompressed_path
+# def decompress_db_file(db_path):
+#     decompressed_path = db_path.replace('.gz', '')
+#     with gzip.open(db_path, 'rb') as f_in:
+#         with open(decompressed_path, 'wb') as f_out:
+#             f_out.write(f_in.read())
+#     return decompressed_path
 
+@st.cache_resource
 def connect_db():
-    db_path = 'data/wysc.db.gz'
-    decompressed_path = decompress_db_file(db_path)
-    return sqlite3.connect(decompressed_path)
+    gz_path = 'data/wysc.db.gz'
+    db_path = gz_path.replace('.gz', '')
+
+    if not os.path.exists(db_path):
+        with gzip.open(gz_path, 'rb') as f_in:
+            with open(db_path, 'wb') as f_out:
+                f_out.write(f_in.read())
+
+    return sqlite3.connect(db_path)
 
 # Load players data
 @st.cache_data
@@ -849,7 +856,7 @@ def display_pizza_chart(player_id, percentiles_df, season_id, competition_id, te
 
     else:
         st.write("No percentile data available for this player in the selected season and competition.")
-        
+
 @st.cache_data
 def get_comparison_options(players_df, leagues_dict):
     """
