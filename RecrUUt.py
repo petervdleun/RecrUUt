@@ -501,7 +501,7 @@ def display_player_information(player_stats_df, player_physical, leagues_dict):
             wyscout_id = dim_player_data["wyscout_id"].iloc[0]
             player_position = dim_player_data["position"].iloc[0]
             # competition_id = dim_player_data["competition_id"].iloc[0]
-            competition_name = dim_player_data["competition_name"].iloc[0]
+            competition_name = dim_player_data["mgp_competition_name"].iloc[0]
 
             # Define position group logic
             position_map = {
