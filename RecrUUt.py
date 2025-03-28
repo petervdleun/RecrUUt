@@ -22,7 +22,6 @@ st.set_page_config(layout='wide')
 #             f_out.write(f_in.read())
 #     return decompressed_path
 
-@st.cache_resource
 def connect_db():
     gz_path = 'data/wysc.db.gz'
     db_path = gz_path.replace('.gz', '')
@@ -87,48 +86,38 @@ def load_player_stats(player_id):
 # Load player percentiles with optional filters
 @st.cache_data
 def load_player_percentiles(player_id=None, filters=None):
-    # Handle decompression only if needed
-    gz_path = 'data/wysc.db.gz'
-    db_path = gz_path.replace('.gz', '')
+    with connect_db() as conn:
 
-    if not os.path.exists(db_path):
-        with gzip.open(gz_path, 'rb') as f_in:
-            with open(db_path, 'wb') as f_out:
-                f_out.write(f_in.read())
+        # Base query for percentiles
+        query = 'SELECT * FROM percentiles'
+        params = []
 
-    # Safe threaded connection
-    conn = sqlite3.connect(db_path, check_same_thread=False)
+        percentiles_conditions = []
+        post_merge_filters = {}
 
-    # Base query for percentiles
-    query = 'SELECT * FROM percentiles'
-    params = []
-
-    percentiles_conditions = []
-    post_merge_filters = {}
-
-    if player_id:
-        query += ' WHERE player_id = ?'
-        params.append(player_id)
-    elif filters:
-        for key, value in filters.items():
-            if key in ['season_id', 'template', 'competition_id']:
-                if key == 'competition_id':
-                    percentiles_conditions.append("competition_id = ?")
-                    params.append(str(value))  # competition_id is TEXT in percentiles
+        if player_id:
+            query += ' WHERE player_id = ?'
+            params.append(player_id)
+        elif filters:
+            for key, value in filters.items():
+                if key in ['season_id', 'template', 'competition_id']:
+                    if key == 'competition_id':
+                        percentiles_conditions.append("competition_id = ?")
+                        params.append(str(value))  # competition_id is TEXT in percentiles
+                    else:
+                        percentiles_conditions.append(f"{key} = ?")
+                        params.append(value)
                 else:
-                    percentiles_conditions.append(f"{key} = ?")
-                    params.append(value)
-            else:
-                post_merge_filters[key] = value
+                    post_merge_filters[key] = value
 
-        if percentiles_conditions:
-            query += ' WHERE ' + ' AND '.join(percentiles_conditions)
+            if percentiles_conditions:
+                query += ' WHERE ' + ' AND '.join(percentiles_conditions)
 
-    # Load tables
-    percentiles_df = pd.read_sql_query(query, conn, params=params)
-    dim_df = pd.read_sql_query("SELECT wyscout_id, mgp_id FROM dim_players", conn)
-    physical_df = pd.read_sql_query("SELECT * FROM mgp_physical", conn)
-    
+        # Load tables
+        percentiles_df = pd.read_sql_query(query, conn, params=params)
+        dim_df = pd.read_sql_query("SELECT wyscout_id, mgp_id FROM dim_players", conn)
+        physical_df = pd.read_sql_query("SELECT * FROM mgp_physical", conn)
+
     # Rename for clarity
     physical_df = physical_df.rename(columns={
         "competition_id": "mgp_competition_id",
