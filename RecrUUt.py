@@ -495,7 +495,6 @@ def display_player_information(player_stats_df, player_physical, leagues_dict):
 
     with col3:
         dim_player_data = player_physical
-        st.dataframe(dim_player_data)
 
         if not dim_player_data.empty:
             mgp_id = dim_player_data["mgp_id"].iloc[0]
@@ -1916,6 +1915,65 @@ def get_shortlist_entries(selected_label, label_to_type):
                 (shortlist_type,)
             )
         return cursor.fetchall()
+    
+@st.cache_data(ttl=0)
+def get_main_positions_vectorized(positions_df):
+    flat = pd.concat([
+        positions_df[["player_id", "position_1", "percent_1"]].rename(columns={"position_1": "position", "percent_1": "percent"}),
+        positions_df[["player_id", "position_2", "percent_2"]].rename(columns={"position_2": "position", "percent_2": "percent"}),
+        positions_df[["player_id", "position_3", "percent_3"]].rename(columns={"position_3": "position", "percent_3": "percent"})
+    ])
+    flat = flat.dropna(subset=["position"])
+    flat = flat[flat["percent"] > 0]
+    grouped = flat.groupby(["player_id", "position"])["percent"].mean().reset_index()
+    idx = grouped.groupby("player_id")["percent"].idxmax()
+    main_positions = grouped.loc[idx][["player_id", "position"]].rename(columns={"position": "main_position"})
+    return main_positions.reset_index(drop=True)
+
+def display_shortlist_row(row, shortlist_labels):
+    player_id = row.player_id
+    player_name = row.full_name
+    team_name = row.current_team_name
+    image_url = row.image_url
+    birth_country = row.birth_country_name
+    main_position = row.main_position
+    shortlist_label = shortlist_labels.get(row.shortlist_type, row.shortlist_type)
+    formatted_date = datetime.strptime(row.date_added, "%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y")
+    position_color = get_background_color(main_position)
+    country_code = get_country_code(birth_country)
+    flag_url = f"https://flagcdn.com/w40/{country_code}.png" if country_code else None
+
+    with st.container():
+        row_col1, row_col2, row_col3 = st.columns([1, 12, 0.75])
+
+        with row_col1:
+            st.markdown(f"""
+                <div style="position: relative; width: 60px; height: 60px;">
+                    <img src="{image_url}" style="width: 60px; height: 60px; border-radius: 4px;" />
+                    {f'<img src="{flag_url}" style="position: absolute; bottom: -5px; right: -7px; width: 18px; height: 12px; border: 1px solid #333; border-radius: 2px;" />' if flag_url else ""}
+                </div>
+            """, unsafe_allow_html=True)
+
+        with row_col2:
+            st.markdown(f"""
+                <div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
+                    <span style="font-weight: 600; font-size: 16px;">{player_name} – {team_name}</span>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
+                        <span style="background-color: #198754; color: white; padding: 2px 8px; border-radius: 6px; font-size: 12px;">{shortlist_label}</span>
+                        <span style="background-color: {position_color}; color: black; padding: 2px 8px; border-radius: 6px; font-size: 12px;">{main_position}</span>
+                        <span style="font-size: 13px; color: gray;">Added: {formatted_date}</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with row_col3:
+            delete_key = f"delete_{player_id}"
+            if st.button("🗑️", key=delete_key, help="Remove from shortlist"):
+                remove_from_shortlist(player_id)
+                st.toast(f"Removed {player_name} from shortlist 🗑️")
+                st.rerun()
+
+    st.markdown("<hr style='margin: 10px 0; border: none; background-color: #3f3f3f;'>", unsafe_allow_html=True)
 
 def display_shortlist():
     st.markdown("## 📋 Shortlisted Data Profiles")
@@ -1929,113 +1987,47 @@ def display_shortlist():
         "loan": "Loan",
         "nat_youth": "National Youth"
     }
+    label_to_type = {v: k for k, v in shortlist_labels.items()}
 
-    # Load and prepare data
+    # -- Filters: placed first so we can pass them into data loading
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        selected_shortlist_label = st.selectbox("Shortlist Type", ["All"] + sorted(shortlist_labels.values()))
+    with col2:
+        selected_position = st.selectbox("Position", ["All Positions"])  # We'll fill this in later
+
+    # Load data
     players_df = get_cached_players()
     positions_df = get_cached_positions()
-    shortlist_data = get_shortlist_entries()
+    shortlist_data = get_shortlist_entries(selected_shortlist_label, label_to_type)
 
     if not shortlist_data:
         st.info("No players in this shortlist yet.")
         return
 
-    # Convert shortlist to DataFrame
     shortlist_df = pd.DataFrame(shortlist_data, columns=["player_id", "shortlist_type", "date_added"])
 
-    @st.cache_data(ttl=0)
-    def get_main_positions_vectorized(positions_df):
-        # Flatten positions into one long DataFrame
-        flat = pd.concat([
-            positions_df[["player_id", "position_1", "percent_1"]].rename(columns={"position_1": "position", "percent_1": "percent"}),
-            positions_df[["player_id", "position_2", "percent_2"]].rename(columns={"position_2": "position", "percent_2": "percent"}),
-            positions_df[["player_id", "position_3", "percent_3"]].rename(columns={"position_3": "position", "percent_3": "percent"})
-        ])
-
-        # Drop rows with missing or 0% data
-        flat = flat.dropna(subset=["position"])
-        flat = flat[flat["percent"] > 0]
-
-        # Compute average percent per player-position
-        grouped = flat.groupby(["player_id", "position"])["percent"].mean().reset_index()
-
-        # For each player, get the position with the highest average percent
-        idx = grouped.groupby("player_id")["percent"].idxmax()
-        main_positions = grouped.loc[idx][["player_id", "position"]]
-        main_positions = main_positions.rename(columns={"position": "main_position"})
-
-        return main_positions.reset_index(drop=True)
-
+    # Compute main positions
     main_positions = get_main_positions_vectorized(positions_df)
-
-    # Merge everything together
     players_df = players_df.merge(main_positions, on="player_id", how="left")
     merged_df = shortlist_df.merge(players_df, on="player_id", how="left")
 
-    # Get all positions for filter dropdown
-    all_positions = sorted(merged_df["main_position"].dropna().unique())
-    all_shortlist_labels = sorted(shortlist_labels.values())
-
-    # -- Filters side by side --
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        selected_shortlist_label = st.selectbox("Shortlist Type", ["All"] + all_shortlist_labels)
-    with col2:
-        selected_position = st.selectbox("Position", ["All Positions"] + all_positions)
+    # Update position filter now that we know them
+    if selected_position == "All Positions":
+        all_positions = sorted(merged_df["main_position"].dropna().unique())
+        selected_position = st.selectbox("Position", ["All Positions"] + all_positions, index=0)
 
     # Apply filters
     if selected_shortlist_label != "All":
-        shortlist_type_code = [k for k, v in shortlist_labels.items() if v == selected_shortlist_label][0]
+        shortlist_type_code = label_to_type[selected_shortlist_label]
         merged_df = merged_df[merged_df["shortlist_type"] == shortlist_type_code]
 
     if selected_position != "All Positions":
         merged_df = merged_df[merged_df["main_position"] == selected_position]
 
-    # Final loop: fast display
+    # Render rows
     for row in merged_df.itertuples():
-        player_id = row.player_id
-        player_name = row.full_name
-        team_name = row.current_team_name
-        image_url = row.image_url
-        birth_country = row.birth_country_name
-        main_position = row.main_position
-        shortlist_label = shortlist_labels.get(row.shortlist_type, row.shortlist_type)
-        formatted_date = datetime.strptime(row.date_added, "%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y")
-        position_color = get_background_color(main_position)
-
-        country_code = get_country_code(birth_country)
-        flag_url = f"https://flagcdn.com/w40/{country_code}.png" if country_code else None
-
-        with st.container():
-            row_col1, row_col2, row_col3 = st.columns([1, 12, 0.75])
-
-            with row_col1:
-                st.markdown(f"""
-                    <div style="position: relative; width: 60px; height: 60px;">
-                        <img src="{image_url}" style="width: 60px; height: 60px; border-radius: 4px;" />
-                        {f'<img src="{flag_url}" style="position: absolute; bottom: -5px; right: -7px; width: 18px; height: 12px; border: 1px solid #333; border-radius: 2px;" />' if flag_url else ""}
-                    </div>
-                """, unsafe_allow_html=True)
-
-            with row_col2:
-                st.markdown(f"""
-                    <div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
-                        <span style="font-weight: 600; font-size: 16px;">{player_name} – {team_name}</span>
-                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
-                            <span style="background-color: #198754; color: white; padding: 2px 8px; border-radius: 6px; font-size: 12px;">{shortlist_label}</span>
-                            <span style="background-color: {position_color}; color: black; padding: 2px 8px; border-radius: 6px; font-size: 12px;">{main_position}</span>
-                            <span style="font-size: 13px; color: gray;">Added: {formatted_date}</span>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-
-            with row_col3:
-                delete_key = f"delete_{player_id}"
-                if st.button("🗑️", key=delete_key, help="Remove from shortlist"):
-                    remove_from_shortlist(player_id)
-                    st.toast(f"Removed {player_name} from shortlist 🗑️")
-                    st.rerun()
-
-        st.markdown("<hr style='margin: 10px 0; border: none; background-color: #3f3f3f;'>", unsafe_allow_html=True)
+        display_shortlist_row(row, shortlist_labels)
 
 def main():
     if 'active_tab' not in st.session_state:
