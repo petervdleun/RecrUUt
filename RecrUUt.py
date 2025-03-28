@@ -213,6 +213,16 @@ def get_country_code(country_name):
         return pycountry.countries.lookup(country_name).alpha_2.lower()
     except LookupError:
         return None
+    
+def get_background_color(position):
+    if position in ["Centre-Back", "Left-Back", "Right-Back"]:
+        return "#89cff0"  # Blue for defensive positions
+    elif position in ["Defensive-Midfield", "Centre-Midfield", "Attacking-Midfield"]:
+        return "#90ee90"  # Green for midfield positions
+    elif position in ["Left-Winger", "Striker", "Right-Winger"]:
+        return "#ff7e82"  # Red for attacking positions
+    else:
+        return "#6C757D"  # Gray for unknown or unspecified positions
 
 def display_player_profile(player_id, players_df, player_positions_df):
     player_data = players_df[players_df['player_id'] == player_id].iloc[0]
@@ -2038,6 +2048,13 @@ def main():
 
     # Sidebar menu for tab selection with custom menu title styling
     with st.sidebar:
+        # Create three columns
+        col1, col2, col3 = st.columns([4, 2, 4])  # Adjust column widths if needed
+
+        # Place the image in the center column
+        with col2:
+            st.image("logo-fcu.png", width=45, use_container_width=False)
+
         # Custom title with styled "UU" in RECRUUT
         st.markdown(
             """
@@ -2047,17 +2064,7 @@ def main():
             """,
             unsafe_allow_html=True
         )
-
-        # Add a small, centered image
-        st.markdown(
-            """
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="fcu.png" alt="FCU Logo" style="width: 100px; height: auto;">
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
+        
         # Sidebar menu for tab selection
         st.session_state['active_tab'] = option_menu(
             menu_title=None,  # Hide default menu title
