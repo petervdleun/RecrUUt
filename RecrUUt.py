@@ -500,7 +500,7 @@ def display_player_information(player_stats_df, player_physical, leagues_dict):
             mgp_id = dim_player_data["mgp_id"].iloc[0]
             wyscout_id = dim_player_data["wyscout_id"].iloc[0]
             player_position = dim_player_data["position"].iloc[0]
-            competition_id = dim_player_data["competition_id"].iloc[0]
+            # competition_id = dim_player_data["competition_id"].iloc[0]
             competition_name = dim_player_data["competition_name"].iloc[0]
 
             # Define position group logic
@@ -2064,7 +2064,7 @@ def main():
             """,
             unsafe_allow_html=True
         )
-        
+
         # Sidebar menu for tab selection
         st.session_state['active_tab'] = option_menu(
             menu_title=None,  # Hide default menu title
