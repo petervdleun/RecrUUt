@@ -80,28 +80,72 @@ def load_player_stats(player_id):
 @st.cache_data
 def load_player_percentiles(player_id=None, filters=None):
     with connect_db() as conn:
+        # Base query for percentiles
         query = 'SELECT * FROM percentiles'
         params = []
+
+        percentiles_conditions = []
+        post_merge_filters = {}
+
         if player_id:
             query += ' WHERE player_id = ?'
             params.append(player_id)
         elif filters:
-            conditions = []
-            if 'season_id' in filters:
-                conditions.append("season_id = ?")
-                params.append(filters['season_id'])
-            if 'template' in filters:
-                conditions.append("template = ?")
-                params.append(filters['template'])
-            if 'competition_id' in filters:
-                conditions.append("competition_id = ?")
-                params.append(filters['competition_id'])
             for key, value in filters.items():
-                if key not in ['season_id', 'template', 'competition_id']:
-                    conditions.append(f"{key} >= ?")
-                    params.append(value)
-            query += ' WHERE ' + ' AND '.join(conditions)
-        return pd.read_sql_query(query, conn, params=params)
+                if key in ['season_id', 'template', 'competition_id']:
+                    if key == 'competition_id':
+                        percentiles_conditions.append("competition_id = ?")
+                        params.append(str(value))  # competition_id is TEXT in percentiles
+                    else:
+                        percentiles_conditions.append(f"{key} = ?")
+                        params.append(value)
+                else:
+                    post_merge_filters[key] = value  # Delay physical filters until after join
+
+            if percentiles_conditions:
+                query += ' WHERE ' + ' AND '.join(percentiles_conditions)
+
+        # Load tables
+        percentiles_df = pd.read_sql_query(query, conn, params=params)
+        dim_df = pd.read_sql_query("SELECT wyscout_id, mgp_id FROM dim_players", conn)
+        physical_df = pd.read_sql_query("SELECT * FROM mgp_physical", conn)
+
+    # Rename for clarity
+    physical_df = physical_df.rename(columns={
+        "competition_id": "mgp_competition_id",
+        "competition_name": "mgp_competition_name",
+        "season": "mgp_season"
+    })
+
+    # Preprocess mappings
+    percentiles_df["competition_id"] = percentiles_df["competition_id"].astype(int)
+    ws_to_mgp = {1: 16, 5: 2}
+    percentiles_df["mapped_competition_id"] = percentiles_df["competition_id"].map(ws_to_mgp)
+    percentiles_df["season_id_int"] = percentiles_df["season_id"].str[:4].astype(int)
+
+    # Merge with dim_players
+    merged = percentiles_df.merge(dim_df, left_on="player_id", right_on="wyscout_id", how="left")
+
+    # Merge with physical data
+    merged = merged.merge(
+        physical_df,
+        left_on=["mgp_id", "season_id_int", "mapped_competition_id"],
+        right_on=["mgp_id", "mgp_season", "mgp_competition_id"],
+        how="left"
+    )
+
+    # Apply remaining (physical) filters
+    for key, value in post_merge_filters.items():
+        if key in merged.columns:
+            merged = merged[merged[key] >= value]
+
+    if 'full_name_x' in merged.columns and 'full_name_y' in merged.columns:
+        merged = merged.rename(columns={
+            'full_name_x': 'full_name',  # from percentiles
+            'full_name_y': 'mgp_full_name'  # from physical table
+        })
+
+    return merged
 
 # Function to load role_scores from the wysc.db database
 @st.cache_data
@@ -125,21 +169,46 @@ def logo_join():
 
     return merged_df
     
-def add_to_shadow_list(player_id):
+@st.cache_data
+def load_dim_players(player_id):
+    with connect_db() as conn:
+        # Load dim_players table, filtering by player_id
+        query = "SELECT * FROM dim_players WHERE wyscout_id = ?"
+        dim_players_df = pd.read_sql_query(query, conn, params=(player_id,))
+
+        # Load mgp_physical table, joining on mgp_id
+        mgp_physical_df = pd.read_sql_query("SELECT * FROM mgp_physical", conn)
+
+    # Merge dim_players with mgp_physical on mgp_id
+    merged_df = pd.merge(dim_players_df, mgp_physical_df, on="mgp_id", how="left")
+
+    return merged_df
+
+def add_to_shadow_list(player_id, shortlist_type):
     with connect_db() as conn:
         cursor = conn.cursor()
-        # Insert player_id and current date
         cursor.execute(
             '''
-            INSERT INTO shadow_list (player_id, date_added)
-            VALUES (?, ?)
+            INSERT OR REPLACE INTO shadow_list (player_id, date_added, type)
+            VALUES (?, ?, ?)
             ''',
-            (player_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            (player_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), shortlist_type)
         )
         conn.commit()
 
 def get_country_code(country_name):
-    """Map country name to ISO Alpha-2 country code using pycountry."""
+    """Map country name to ISO Alpha-2 or subdivision codes, with manual fixes."""
+    manual_fixes = {
+        "England": "gb-eng",
+        "Scotland": "gb-sct",
+        "Wales": "gb-wls",
+        "Northern Ireland": "gb-nir",
+        "Korea Republic": "kr",
+    }
+
+    if country_name in manual_fixes:
+        return manual_fixes[country_name]
+
     try:
         return pycountry.countries.lookup(country_name).alpha_2.lower()
     except LookupError:
@@ -191,21 +260,11 @@ def display_player_profile(player_id, players_df, player_positions_df):
         # Determine the main position based on the highest average percentage
         main_position = max(position_averages, key=position_averages.get)
 
-    def get_background_color(position):
-        if position in ["Centre-Back", "Left-Back", "Right-Back"]:
-            return "#89cff0"  # Blue for defensive positions
-        elif position in ["Defensive-Midfield", "Centre-Midfield", "Attacking-Midfield"]:
-            return "#90ee90"  # Green for midfield positions
-        elif position in ["Left-Winger", "Striker", "Right-Winger"]:
-            return "#ff7e82"  # Red for attacking positions
-        else:
-            return "#6C757D"  # Gray for unknown or unspecified positions
-        
-    background_color = get_background_color(main_position)
-
     # Get the ISO Alpha-2 code for the flag
     country_code = get_country_code(birth_country)
     flag_url = f"https://flagcdn.com/w40/{country_code}.png" if country_code else None
+        
+    background_color = get_background_color(main_position)
 
     with st.container():
         st.markdown(
@@ -253,6 +312,16 @@ def display_player_profile(player_id, players_df, player_positions_df):
                 border-radius: 8px;
                 margin-left: 10px;
             }}
+                .stButton>button {{
+                    background-color: #ff7e82;
+                    color: black;
+                    padding: 4px 10px;        /* tighter spacing */
+                    border-radius: 10px;       /* slightly less round */
+                    transition: background-color 0.3s ease;
+            }}
+            .stButton>button:hover {{
+                background-color: black;
+            }}
             </style>
             """,
             unsafe_allow_html=True
@@ -262,34 +331,55 @@ def display_player_profile(player_id, players_df, player_positions_df):
         flag_html = f'<img src="{flag_url}" alt="{birth_country} flag" />' if flag_url else ''
         main_position_html = f'<span class="position-label">{main_position}</span>' if main_position else ''
 
-        st.markdown(
-            f"""
-            <div class="profile-card">
-                <img src="{player_image_url}" alt="Player Image" class="profile-image" />
-                <div class="profile-details">
-                    <h3>{player_name} {flag_html}</h3>
-                    <p>{formatted_birth_date} {main_position_html}</p>
+        # Use columns to position the card and button on the same row
+        col1, col2 = st.columns([3, 1])  # Wider left side for the profile card
+
+        with col1:
+            st.markdown(
+                f"""
+                <div class="profile-card">
+                    <img src="{player_image_url}" alt="Player Image" class="profile-image" />
+                    <div class="profile-details">
+                        <h3>{player_name} {flag_html}</h3>
+                        <p>{formatted_birth_date} {main_position_html}</p>
+                    </div>
                 </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+                """,
+                unsafe_allow_html=True
+            )
 
-        # # Button to add player to shadow list
-        # trigger_btn = ui.button(
-        #     text="+ add to shadow list",
-        #     variant="ghost",
-        #     size="sm",
-        #     key="trigger_btn"
-        # )
+        with col2:
+            # Map display labels to internal DB values
+            shortlist_map = {
+                "Talent": "talent",
+                "Performance": "performance",
+                "Expiring Contract": "expiring_contract",
+                "Breakout": "breakout",
+                "Loan": "loan",
+                "National Youth": "nat_youth"
+            }
 
-        # # Perform the action directly if the button is clicked
-        # if trigger_btn:
-        #     add_to_shadow_list(player_id)  # Add player to the shadow list
-        #     st.toast(f"{player_name} has been added to the Shadow List!", icon="✅")
+            with st.form(key=f"shortlist_form_{player_id}"):
+                col_dropdown, col_button = st.columns([1.2, 1])
+
+                with col_dropdown:
+                    selected_display = st.selectbox(
+                        "Shortlist",
+                        list(shortlist_map.keys()),
+                        label_visibility="collapsed",
+                        key=f"shortlist_type_{player_id}"
+                    )
+
+                with col_button:
+                    submitted = st.form_submit_button("Shortlist", type='primary', help='add player to shortlist')
+
+                if submitted:
+                    shortlist_type = shortlist_map[selected_display]
+                    add_to_shadow_list(player_id, shortlist_type)
+                    st.toast(f"{player_name} added to {selected_display} shortlist ✅")
 
 # Function to display player information with team logo
-def display_player_information(player_stats_df, leagues_dict):
+def display_player_information(player_stats_df, player_physical, leagues_dict):
     # Function to generate flag HTML based on country name
     def get_flag_html(country_name):
         country_code = get_country_code(country_name)  # Function to get ISO Alpha-2 code
@@ -315,8 +405,9 @@ def display_player_information(player_stats_df, leagues_dict):
 
     # Merge player data with logos data
     merged_data = logo_join()
+    player_positions = load_player_positions()
 
-    col1, col2 = st.columns([0.65, 0.35])
+    col1, col2, col3 = st.columns([0.65, 0.05, 0.30])
 
     with col1:
         # Display the title
@@ -377,14 +468,170 @@ def display_player_information(player_stats_df, leagues_dict):
         # Add the annotation for the icon
         st.markdown(
             f"""
-            <div style="margin-top: 10px; text-align: left; font-size: 11px; font-style: italic; color: white;">
-                <img src="https://img.icons8.com/?size=100&id=9770&format=png&color=FFFFFF" alt="Non-Penalty Goals Icon" style="width: 15px; height: 15px; margin-right: 5px; vertical-align: middle;">
-                Non-Penalty Goals
+            <div style="margin-top: 10px; text-align: left; font-size: 11px; font-style: italic; color: white; display: flex; gap: 20px; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <img src="https://img.icons8.com/?size=100&id=9770&format=png&color=FFFFFF" alt="Non-Penalty Goals Icon" style="width: 15px; height: 15px; margin-right: 5px; vertical-align: middle;">
+                    Non-Penalty Goals
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <img src="https://img.icons8.com/ios-filled/50/ffffff/handshake-heart.png" alt="Assists Icon" style="width: 15px; height: 15px; margin-right: 6px; vertical-align: middle;">
+                    Assists
+                </div>
             </div>
             """,
             unsafe_allow_html=True
         )
-        st.markdown("</div>", unsafe_allow_html=True)
+
+
+    with col3:
+        dim_player_data = player_physical
+
+        if not dim_player_data.empty:
+            mgp_id = dim_player_data["mgp_id"].iloc[0]
+            wyscout_id = dim_player_data["wyscout_id"].iloc[0]
+            player_position = dim_player_data["position"].iloc[0]
+            competition_id = dim_player_data["competition_id"].iloc[0]
+            competition_name = dim_player_data["competition_name"].iloc[0]
+
+            # Define position group logic
+            position_map = {
+                "CDM": ["CDM", "CM"],
+                "LW": ["LW", "RW"],
+                "RW": ["RW", "LW"],
+                "LB": ["LB", "RB"],
+                "RB": ["RB", "LB"]
+            }
+            comparison_positions = position_map.get(player_position, [player_position])
+
+            if pd.notna(mgp_id) and pd.notna(wyscout_id):
+                st.image("skillcorner.png", width=30)
+
+                # Extract metrics from dataframe
+                distance_avg = dim_player_data["distance_avg"].iloc[0]
+                hid_avg = dim_player_data["hid_in_poss_avg"].iloc[0] + dim_player_data["hid_out_poss_avg"].iloc[0]
+                speed_max = dim_player_data["psv_99_avg_t5"].iloc[0]
+
+                # Use precomputed percentiles
+                distance_percentile = dim_player_data["distance_avg_pc"].iloc[0]
+                hid_percentile = dim_player_data["hid_total_pc"].iloc[0]
+                speed_percentile = dim_player_data["psv_99_avg_t5_pc"].iloc[0]
+
+                # Styling function
+                def border_gradient(percentile):
+                    try:
+                        fill_percent = int(percentile) if not pd.isna(percentile) else 0
+                    except ValueError:
+                        fill_percent = 0
+                    if fill_percent < 3:
+                        fill_percent = 3
+                    colors = {"green": "#43A047", "orange": "#FFA726", "red": "#E53935"}
+                    color = colors["green"] if fill_percent >= 67 else colors["orange"] if fill_percent >= 34 else colors["red"]
+                    return f"""
+                        background: conic-gradient(
+                            {color} 0% {fill_percent}%,
+                            #1e1e1e {fill_percent}% 100%
+                        );
+                        border-radius: 10px;
+                        padding: 3px;
+                    """
+
+                # CSS Styling
+                st.markdown("""
+                    <style>
+                    .stat-box-wrapper {
+                        display: flex;
+                        justify-content: space-evenly;
+                        align-items: center;
+                        flex-wrap: nowrap;
+                        gap: 12px;
+                        width: 100%;
+                    }
+                    .stat-box-container {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        width: 102px;
+                        height: 102px;
+                        flex-shrink: 0;
+                        position: relative;
+                    }
+                    .stat-box {
+                        text-align: center;
+                        background-color: #1e1e1e;
+                        padding: 12px;
+                        border-radius: 8px;
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                    }
+                    .stat-label {
+                        font-size: 12px;
+                        color: gray;
+                        text-align: center;
+                    }
+                    .stat-value {
+                        font-size: 16px;
+                        font-weight: bold;
+                        color: white;
+                    }
+                    .tooltip {
+                        font-size: 14px;
+                        color: white;
+                        background-color: #333;
+                        padding: 8px;
+                        border-radius: 5px;
+                        width: 200px;
+                        text-align: center;
+                        position: absolute;
+                        top: 110%;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        z-index: 10;
+                        display: none;
+                    }
+                    .stat-box:hover .tooltip {
+                        display: block;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+
+                # Render the boxes
+                st.markdown(f"""
+                    <div class="stat-box-wrapper">
+                        <div class="stat-box-container" style="{border_gradient(distance_percentile)}">
+                            <div class="stat-box">
+                                <div class="stat-label">Total Distance (m.)</div>
+                                <div class="stat-value">{'N/A' if pd.isna(distance_avg) else f'{distance_avg:.1f}'}</div>
+                                <div class="tooltip">
+                                    Percentile: {int(distance_percentile)}%<br/>
+                                    vs {competition_name}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-box-container" style="{border_gradient(hid_percentile)}">
+                            <div class="stat-box">
+                                <div class="stat-label">High-Intensity Distance (m.)</div>
+                                <div class="stat-value">{'N/A' if pd.isna(hid_avg) else f'{hid_avg:.1f}'}</div>
+                                <div class="tooltip">
+                                    Percentile: {int(hid_percentile)}%<br/>
+                                    vs {competition_name}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-box-container" style="{border_gradient(speed_percentile)}">
+                            <div class="stat-box">
+                                <div class="stat-label">Top-5 Max. Speed (km/h)</div>
+                                <div class="stat-value">{'N/A' if pd.isna(speed_max) else f'{speed_max:.1f}'}</div>
+                                <div class="tooltip">
+                                    Percentile: {int(speed_percentile)}%<br/>
+                                    vs {competition_name}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
 
 # Mapping templates to their specific variables
 template_variable_map = {
@@ -446,7 +693,10 @@ percentile_labels = {
     "xa_per_rp_perc": "xA per 10 Received Passes",
     "comp_f3_perc": "Pass Entries Final Third",
     "comp_box_perc": "Pass Entries Box",
-    "xg_conv_perc": "xG Conversion"
+    "xg_conv_perc": "xG Conversion",
+    "distance_avg_pc": "Total Distance",
+    "hid_total_pc": "High-Intensity Distance",
+    "psv_99_avg_t5_pc": "Top-5 Max Speed",
 }
 
 def ordinal_suffix(n):
@@ -691,29 +941,49 @@ def player_search():
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         available_seasons = percentiles_df['season_id'].unique()
-        selected_season = st.selectbox("Select Season", available_seasons)
+        default_season_index = list(available_seasons).index("2024-25") if "2024-25" in available_seasons else 0
+        selected_season = st.selectbox("Select Season", available_seasons, index=default_season_index)
     with col2:
         # Manual order for templates
         template_options = ['CB', 'FB', 'DM', 'CM', 'W', 'ST']
         selected_template = st.selectbox("Select Template", template_options, index=template_options.index('CM'))
     with col3:
-        # Prepare competition options as "country - competition", sorted alphabetically
-        available_competitions = percentiles_df['competition_id'].unique()
-        competition_options = sorted([
-            f"{leagues_dict[comp_id]['country_name']} - {leagues_dict[comp_id]['competition_name']}"
+        # Convert competition_id to int safely
+        available_competitions = (
+            percentiles_df['competition_id']
+            .dropna()
+            .astype(int)  # Convert from TEXT to INT for lookup
+            .unique()
+        )
+
+        # Build competition display names for dropdown
+        competition_display_map = {
+            f"{leagues_dict[comp_id]['country_name']} - {leagues_dict[comp_id]['competition_name']}": comp_id
             for comp_id in available_competitions
-        ])
+            if comp_id in leagues_dict
+        }
+
+        # Fallback if none found (shouldn't happen unless data is wrong)
+        if not competition_display_map:
+            competition_display_map = {
+                f"{data['country_name']} - {data['competition_name']}": comp_id
+                for comp_id, data in leagues_dict.items()
+            }
+
+        competition_options = sorted(competition_display_map.keys())
+
+        default_display = "Netherlands - Eredivisie"
+        default_index = competition_options.index(default_display) if default_display in competition_options else 0
+
         selected_competition_display = st.selectbox(
-            "Select Competition", 
-            competition_options, 
-            index=competition_options.index("Netherlands - Eredivisie")
+            "Select Competition",
+            competition_options,
+            index=default_index
         )
-        
-        # Reverse-map selected competition display to competition_id
-        selected_competition_id = next(
-            comp_id for comp_id, data in leagues_dict.items()
-            if f"{data['country_name']} - {data['competition_name']}" == selected_competition_display
-        )
+
+        # Map display back to Wyscout competition_id
+        selected_competition_id = competition_display_map[selected_competition_display]
+
     with col4:
         # Get unique age values and sort them
         players_df['age'] = pd.to_datetime('today').year - pd.to_datetime(players_df['birth_date']).dt.year
@@ -728,6 +998,15 @@ def player_search():
     if st.button("Add Filter", key="add_filter_btn"):
         st.session_state.percentile_filters.append({'column': list(percentile_labels.keys())[0], 'value': 50})
 
+    # Check if selected competition has physical data
+    has_physical_data = int(selected_competition_id) in [1, 5]
+
+    # Only show physical-related filters if the competition supports it
+    available_filter_columns = list(percentile_labels.keys())
+    if not has_physical_data:
+        physical_keys = ["distance_avg_pc", "hid_total_pc", "psv_99_avg_t5_pc"]
+        available_filter_columns = [k for k in available_filter_columns if k not in physical_keys]
+
     # Render existing filters
     for i, filter in enumerate(st.session_state.percentile_filters):
         cols = st.columns([1.2, 0.7, 0.4])
@@ -735,14 +1014,16 @@ def player_search():
         # Dropdown for column selection with labels
         with cols[0]:
             selected_label = percentile_labels[filter['column']]
+            # Show only allowed columns
             selected_column = st.selectbox(
                 "Filter Column",
-                list(percentile_labels.values()),
-                index=list(percentile_labels.values()).index(selected_label),
+                [percentile_labels[col] for col in available_filter_columns],
+                index=[percentile_labels[col] for col in available_filter_columns].index(selected_label),
                 key=f"percentile_column_{i}"
             )
             actual_column = next(key for key, value in percentile_labels.items() if value == selected_column)
             st.session_state.percentile_filters[i]['column'] = actual_column
+
             
         # Number input for setting percentile value
         with cols[1]:
@@ -872,7 +1153,6 @@ def player_search():
 
     st.markdown("</div>", unsafe_allow_html=True)  # Close container
 
-
 # Player Percentiles tab content
 def player_percentiles():
 
@@ -910,10 +1190,9 @@ def player_percentiles():
     # Combine Utrecht players at the top
     sorted_player_options = {**sorted_utrecht_players, **sorted_other_players}
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns([0.5, 0.25, 0.25])  # Adjusted layout
 
     with col1:
-        # Use the selectbox to display the cleaned player name and current team, with Utrecht players on top
         selected_player_id = st.selectbox(
             "Choose a player",
             options=sorted_player_options.keys(),
@@ -923,6 +1202,7 @@ def player_percentiles():
 
     # Display player profile
     player_stats_df = load_player_stats(selected_player_id)
+    player_physical = load_dim_players(selected_player_id)
     available_seasons = player_stats_df['season_id'].unique() if not player_stats_df.empty else ['2024-25']
     default_season = '2024-25' if '2024-25' in available_seasons else available_seasons[0]
 
@@ -974,7 +1254,7 @@ def player_percentiles():
     if selected_tab == 'Information':
         # Display all available season and club information for the selected player
         if not player_stats_df.empty:
-            display_player_information(player_stats_df, leagues_dict)
+            display_player_information(player_stats_df, player_physical, leagues_dict)
         else:
             st.write("No player information available for this player.")
 
@@ -1077,7 +1357,7 @@ def player_percentiles():
             if performance_tab == 'Radar Chart':
                 season_templates = percentiles_df[
                     (percentiles_df['season_id'] == st.session_state['selected_season']) &
-                    (percentiles_df['competition_id'] == st.session_state['selected_competition'])
+                    (percentiles_df['competition_id'].astype(str) == str(st.session_state['selected_competition']))
                 ]['template'].unique()
 
                 if season_templates.any():
@@ -1582,6 +1862,170 @@ def scheduling_games():
     else:
         st.write("No games found for the selected leagues.")
 
+def remove_from_shortlist(player_id):
+    with connect_db() as conn:
+        cursor = conn.cursor()
+
+        # Fetch current entry before deleting
+        cursor.execute("SELECT type, date_added FROM shadow_list WHERE player_id = ?", (player_id,))
+        result = cursor.fetchone()
+
+        if result:
+            shortlist_type, date_added = result
+            date_removed = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Insert into history table
+            cursor.execute("""
+                INSERT INTO shadow_list_history (player_id, type, date_added, date_removed)
+                VALUES (?, ?, ?, ?)
+            """, (player_id, shortlist_type, date_added, date_removed))
+
+            # Remove from active list
+            cursor.execute("DELETE FROM shadow_list WHERE player_id = ?", (player_id,))
+            conn.commit()
+
+@st.cache_data(ttl=0)
+def get_cached_players():
+    return load_players()
+
+@st.cache_data(ttl=0)
+def get_cached_positions():
+    return load_player_positions()
+
+@st.cache_data(ttl=0)
+def get_shortlist_entries(selected_label, label_to_type):
+    with connect_db() as conn:
+        cursor = conn.cursor()
+        if selected_label == "All":
+            cursor.execute("SELECT player_id, type, date_added FROM shadow_list ORDER BY date_added DESC")
+        else:
+            shortlist_type = label_to_type[selected_label]
+            cursor.execute(
+                "SELECT player_id, type, date_added FROM shadow_list WHERE type = ? ORDER BY date_added DESC",
+                (shortlist_type,)
+            )
+        return cursor.fetchall()
+
+def display_shortlist():
+    st.markdown("## 📋 Shortlisted Data Profiles")
+
+    # Shortlist type labels
+    shortlist_labels = {
+        "talent": "Talent",
+        "performance": "Performance",
+        "expiring_contract": "Expiring Contract",
+        "breakout": "Breakout",
+        "loan": "Loan",
+        "nat_youth": "National Youth"
+    }
+
+    # Load and prepare data
+    players_df = get_cached_players()
+    positions_df = get_cached_positions()
+    shortlist_data = get_shortlist_entries()
+
+    if not shortlist_data:
+        st.info("No players in this shortlist yet.")
+        return
+
+    # Convert shortlist to DataFrame
+    shortlist_df = pd.DataFrame(shortlist_data, columns=["player_id", "shortlist_type", "date_added"])
+
+    @st.cache_data(ttl=0)
+    def get_main_positions_vectorized(positions_df):
+        # Flatten positions into one long DataFrame
+        flat = pd.concat([
+            positions_df[["player_id", "position_1", "percent_1"]].rename(columns={"position_1": "position", "percent_1": "percent"}),
+            positions_df[["player_id", "position_2", "percent_2"]].rename(columns={"position_2": "position", "percent_2": "percent"}),
+            positions_df[["player_id", "position_3", "percent_3"]].rename(columns={"position_3": "position", "percent_3": "percent"})
+        ])
+
+        # Drop rows with missing or 0% data
+        flat = flat.dropna(subset=["position"])
+        flat = flat[flat["percent"] > 0]
+
+        # Compute average percent per player-position
+        grouped = flat.groupby(["player_id", "position"])["percent"].mean().reset_index()
+
+        # For each player, get the position with the highest average percent
+        idx = grouped.groupby("player_id")["percent"].idxmax()
+        main_positions = grouped.loc[idx][["player_id", "position"]]
+        main_positions = main_positions.rename(columns={"position": "main_position"})
+
+        return main_positions.reset_index(drop=True)
+
+    main_positions = get_main_positions_vectorized(positions_df)
+
+    # Merge everything together
+    players_df = players_df.merge(main_positions, on="player_id", how="left")
+    merged_df = shortlist_df.merge(players_df, on="player_id", how="left")
+
+    # Get all positions for filter dropdown
+    all_positions = sorted(merged_df["main_position"].dropna().unique())
+    all_shortlist_labels = sorted(shortlist_labels.values())
+
+    # -- Filters side by side --
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        selected_shortlist_label = st.selectbox("Shortlist Type", ["All"] + all_shortlist_labels)
+    with col2:
+        selected_position = st.selectbox("Position", ["All Positions"] + all_positions)
+
+    # Apply filters
+    if selected_shortlist_label != "All":
+        shortlist_type_code = [k for k, v in shortlist_labels.items() if v == selected_shortlist_label][0]
+        merged_df = merged_df[merged_df["shortlist_type"] == shortlist_type_code]
+
+    if selected_position != "All Positions":
+        merged_df = merged_df[merged_df["main_position"] == selected_position]
+
+    # Final loop: fast display
+    for row in merged_df.itertuples():
+        player_id = row.player_id
+        player_name = row.full_name
+        team_name = row.current_team_name
+        image_url = row.image_url
+        birth_country = row.birth_country_name
+        main_position = row.main_position
+        shortlist_label = shortlist_labels.get(row.shortlist_type, row.shortlist_type)
+        formatted_date = datetime.strptime(row.date_added, "%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y")
+        position_color = get_background_color(main_position)
+
+        country_code = get_country_code(birth_country)
+        flag_url = f"https://flagcdn.com/w40/{country_code}.png" if country_code else None
+
+        with st.container():
+            row_col1, row_col2, row_col3 = st.columns([1, 12, 0.75])
+
+            with row_col1:
+                st.markdown(f"""
+                    <div style="position: relative; width: 60px; height: 60px;">
+                        <img src="{image_url}" style="width: 60px; height: 60px; border-radius: 4px;" />
+                        {f'<img src="{flag_url}" style="position: absolute; bottom: -5px; right: -7px; width: 18px; height: 12px; border: 1px solid #333; border-radius: 2px;" />' if flag_url else ""}
+                    </div>
+                """, unsafe_allow_html=True)
+
+            with row_col2:
+                st.markdown(f"""
+                    <div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
+                        <span style="font-weight: 600; font-size: 16px;">{player_name} – {team_name}</span>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
+                            <span style="background-color: #198754; color: white; padding: 2px 8px; border-radius: 6px; font-size: 12px;">{shortlist_label}</span>
+                            <span style="background-color: {position_color}; color: black; padding: 2px 8px; border-radius: 6px; font-size: 12px;">{main_position}</span>
+                            <span style="font-size: 13px; color: gray;">Added: {formatted_date}</span>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            with row_col3:
+                delete_key = f"delete_{player_id}"
+                if st.button("🗑️", key=delete_key, help="Remove from shortlist"):
+                    remove_from_shortlist(player_id)
+                    st.toast(f"Removed {player_name} from shortlist 🗑️")
+                    st.rerun()
+
+        st.markdown("<hr style='margin: 10px 0; border: none; background-color: #3f3f3f;'>", unsafe_allow_html=True)
+
 def main():
     if 'active_tab' not in st.session_state:
         st.session_state['active_tab'] = 'Player Profile'
@@ -1594,14 +2038,6 @@ def main():
 
     # Sidebar menu for tab selection with custom menu title styling
     with st.sidebar:
-
-        # Create three columns
-        col1, col2, col3 = st.columns([4, 2, 4])  # Adjust column widths if needed
-
-        # Place the image in the center column
-        with col2:
-            st.image("logo-fcu.png", width=45, use_container_width=False)
-
         # Custom title with styled "UU" in RECRUUT
         st.markdown(
             """
@@ -1612,17 +2048,31 @@ def main():
             unsafe_allow_html=True
         )
 
+        # Add a small, centered image
+        st.markdown(
+            """
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="fcu.png" alt="FCU Logo" style="width: 100px; height: auto;">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
         # Sidebar menu for tab selection
         st.session_state['active_tab'] = option_menu(
             menu_title=None,  # Hide default menu title
             menu_icon="list",
-            options=["Player Profile", "Player Search", "Scheduling Games"],
-            icons=["bar-chart-line", "search", "calendar"],
+            options=["Player Profile", "Player Search", "Scheduling Games", "Shortlist"],  # Added 'Shortlist'
+            icons=["bar-chart-line", "search", "calendar", "bookmark-check"],  # New icon for Shortlist
             default_index=0,
             key="menu_option",
             styles={
                 "nav-link": {"font-size": "14px", "text-align": "left", "margin": "0px"},
-                "nav-link-selected": {"font-weight": "bold", "color": "black", "background-color": "#ff7e82"}
+                "nav-link-selected": {
+                    "font-weight": "bold",
+                    "color": "black",
+                    "background-color": "#ff7e82"
+                }
             }
         )
 
@@ -1640,6 +2090,8 @@ def main():
         player_search()
     elif st.session_state['active_tab'] == 'Scheduling Games':
         scheduling_games()
+    elif st.session_state['active_tab'] == 'Shortlist':
+        display_shortlist()
 
 if __name__ == "__main__":
     main()
